@@ -1,20 +1,29 @@
 // src/models/User.ts
 import mongoose from 'mongoose';
 
+const addressSchema = new mongoose.Schema({
+  label: { type: String }, // e.g., "Home", "Work"
+  street: { type: String },
+  city: { type: String },
+  latitude: { type: Number },
+  longitude: { type: Number },
+});
+
 const userSchema = new mongoose.Schema(
   {
-    name: { type: String, required: false },
+    name: { type: String },
     phone: { type: String, required: true, unique: true },
-    email: { type: String, unique: false },
+    email: { type: String },
     location: { type: String },
     password: { type: String }, // optional for password-based login
     role: { type: String, enum: ['user', 'pharmacy', 'admin'], default: 'user' },
     isVerified: { type: Boolean, default: false },
-    otp : { type: String }, // for OTP-based login
-    otpExpiresAt: { type: Date }, // for OTP expiration
+    otp: { type: String },
+    otpExpiresAt: { type: Date },
+    language: { type: String, enum: ['en', 'am'], default: 'en' },
+    addresses: [addressSchema], // for delivery addresses
   },
   { timestamps: true }
 );
 
-const User = mongoose.model('User', userSchema);
-export default User;
+export default mongoose.model('User', userSchema);
