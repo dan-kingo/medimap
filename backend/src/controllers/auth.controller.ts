@@ -43,12 +43,20 @@ export const resendOtp = async (req: Request, res: Response) => {
 
 
 
-export const setPassword = async (req: Request, res: Response) => {
-  const { phone, password } = req.body;
 
-  const user = await User.findOne({ phone });
-  if (!user || !user.isVerified) {
-     res.status(403).json({ message: 'OTP not verified or user not found' });
+
+export const setPassword = async (req: Request, res: Response) => {
+  const { password } = req.body;
+
+  if (!req.user?.userId) {
+     res.status(401).json({ message: 'Unauthorized' });
+     return
+  }
+
+  const user = await User.findById(req.user.userId);
+
+  if (!user) {
+     res.status(404).json({ message: 'User not found' });
      return
   }
 
@@ -57,6 +65,7 @@ export const setPassword = async (req: Request, res: Response) => {
 
   res.status(200).json({ message: 'Password set successfully' });
 };
+
 
 export const loginWithPassword = async (req: Request, res: Response) => {
   const { phone, password } = req.body;
