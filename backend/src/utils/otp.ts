@@ -29,6 +29,10 @@ export const sendOtpToUser = async ({phone,name,email,location}:SendOtpInput): P
 
   let user = await User.findOne({ phone });
 
+  if (user?.password) {
+    throw new Error('Password is already set. Please log in with password.');
+  }
+
   if (!user) {
     user = await User.create({name,email,location, phone, otp, otpExpiresAt });
   } else {
@@ -75,6 +79,11 @@ export const resendOtpToUser = async (phone: string): Promise<void> => {
   if (!user) {
     throw new Error('User not found');
   }
+
+  if (user.password) {
+    throw new Error('OTP login disabled. Please log in with password.');
+  }
+
 
   const otp = generateOtp();
   const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
