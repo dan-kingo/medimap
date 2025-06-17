@@ -35,3 +35,19 @@ export const placeOrder = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Something went wrong' });
   }
 };
+
+export const getMyOrders = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    const orders = await Order.find({ user: userId })
+      .populate('items.medicine', 'name strength type') // include medicine info
+      .populate('items.pharmacy', 'name address')        // include pharmacy info
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(orders);
+  } catch (err) {
+    console.error('Error fetching orders:', err);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+};
