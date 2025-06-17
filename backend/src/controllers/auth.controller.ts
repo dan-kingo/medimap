@@ -33,8 +33,10 @@ export const verifyOtpAndLogin = async (req: Request, res: Response) => {
 };
 
 export const resendOtp = async (req: Request, res: Response) => {
-  const { phone } = req.body;
-  if (!phone) return res.status(400).json({ message: 'Phone is required' });
+  const { phone} = req.body;
+  if (!phone) 
+    { res.status(400).json({ message: 'Phone is required' });
+    return }
 
   try {
     await resendOtpToUser(phone);
