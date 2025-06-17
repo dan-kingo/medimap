@@ -6,6 +6,7 @@ import cors from 'cors'
 import connectDB from './configs/db.js';
 import accessLogStream from './middlewares/loggerMiddleware.js';
 import corsOptions from './middlewares/corsOptionsMiddleware.js';
+import authRoutes from './routes/auth.routes.js';
 
 const appDebug = debug('app:startup');
 const app = express();
@@ -16,7 +17,7 @@ connectDB()
 app.use(express.json())
 app.use(morgan("combined",{stream:accessLogStream}))
 app.use(cors(corsOptions))
-
+app.use("/api",authRoutes)
 app.get('/', (_req:Request, res:Response) => {
   res.send('Hello, World!');
 }
