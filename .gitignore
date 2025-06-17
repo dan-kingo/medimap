@@ -1,5 +1,5 @@
 node_modules/
-src/dist/
+backend/src/dist/
 # Logs
-src/logs
+backend/src/logs
 .env
