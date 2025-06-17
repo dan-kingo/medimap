@@ -23,6 +23,13 @@ const orderSchema = new mongoose.Schema(
       enum: ['Placed', 'Accepted', 'Out for Delivery', 'Delivered', 'Cancelled'],
       default: 'Placed',
     },
+    notifications: [
+  {
+    type: { type: String },
+    message: String,
+    sentAt: Date,
+  }
+],
     prescriptionUrl: { type: String },
     paymentMethod: { type: String, enum: ['COD'], default: 'COD' },
   },

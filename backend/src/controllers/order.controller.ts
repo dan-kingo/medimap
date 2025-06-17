@@ -1,6 +1,8 @@
 // src/controllers/orderController.ts
 import { Request, Response } from 'express';
 import Order from '../models/order.js'
+import { notifyUserOrderStatus } from '../utils/notification.js';
+import User from '../models/user.js';
 
 export const placeOrder = async (req: Request, res: Response) => {
   try {
@@ -70,5 +72,28 @@ export const getOrderById = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching order:', error);
     res.status(500).json({ error: 'Failed to fetch order' });
+  }
+};
+export const updateOrderStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const order = await Order.findById(id);
+    if (!order) { res.status(404).json({ error: 'Order not found' });
+
+    return }
+
+    order.status = status;
+    await order.save();
+
+    const user = await User.findById(order.user);
+    if (user?.phone) {
+      await notifyUserOrderStatus(order._id.toString(), status, user.phone);
+    }
+
+    res.json({ message: 'Order status updated' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update order status' });
   }
 };
