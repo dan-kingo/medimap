@@ -6,6 +6,13 @@ const authToken = process.env.TWILIO_AUTH_TOKEN!;
 const fromPhone = process.env.TWILIO_PHONE_NUMBER!;
 const client = twilio(accountSid, authToken);
 
+interface SendOtpInput {
+  phone: string;
+  name?: string;
+  email?: string;
+  location?: string;
+}
+
 /**
  * Generate a 6-digit numeric OTP.
  */
@@ -16,14 +23,14 @@ const generateOtp = (): string => {
 /**
  * Sends an OTP to the provided phone number and stores it in the user document.
  */
-export const sendOtpToUser = async (phone: string): Promise<void> => {
+export const sendOtpToUser = async ({phone,name,email,location}:SendOtpInput): Promise<void> => {
   const otp = generateOtp();
   const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
   let user = await User.findOne({ phone });
 
   if (!user) {
-    user = await User.create({ phone, otp, otpExpiresAt });
+    user = await User.create({name,email,location, phone, otp, otpExpiresAt });
   } else {
     user.otp = otp;
     user.otpExpiresAt = otpExpiresAt;

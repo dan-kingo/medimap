@@ -5,16 +5,19 @@ import bcrypt from 'bcrypt';
 import User from '../models/user.js';
 
 export const requestOtp = async (req: Request, res: Response) => {
-  const { phone } = req.body;
-  if (!phone) { res.status(400).json({ message: 'Phone is required' });
-return
-}
+  const { phone, name, email, location } = req.body;
+
+  if (!phone) {
+     res.status(400).json({ message: 'Phone is required' });
+     return
+  }
+
   try {
-    await sendOtpToUser(phone);
+    await sendOtpToUser({ phone, name, email, location });
     res.status(200).json({ message: 'OTP sent' });
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
-    res.status(500).json({ message: 'Failed to send OTP' });
+    res.status(500).json({ message: err.message || 'Failed to send OTP' });
   }
 };
 
@@ -40,10 +43,6 @@ export const resendOtp = async (req: Request, res: Response) => {
     res.status(400).json({ message: err.message });
   }
 };
-
-
-
-
 
 export const setPassword = async (req: Request, res: Response) => {
   const { password } = req.body;

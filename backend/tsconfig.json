@@ -4,6 +4,10 @@
     "module": "ESNext",
     "lib": ["ES2020"],
     "moduleResolution": "node",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./src/types"
+    ],
     "outDir": "./dist",
     "rootDir": "./src",
     "esModuleInterop": true,
