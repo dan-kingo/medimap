@@ -8,8 +8,17 @@ const medicineSchema = new mongoose.Schema(
     type: { type: String, enum: ['Tablet', 'Syrup', 'Injection'] },
     description: { type: String },
     requiresPrescription: { type: Boolean, default: false },
+    price: { type: Number, required: true },
+
+    // Reference to the seller pharmacy
+    pharmacy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Pharmacy',
+      required: true,
+    },
   },
   { timestamps: true }
 );
 
 export default mongoose.model('Medicine', medicineSchema);
+

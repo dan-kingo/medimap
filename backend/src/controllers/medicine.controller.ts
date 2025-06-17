@@ -5,11 +5,12 @@ import Inventory from '../models/inventory.js';
 import Pharmacy from '../models/pharmacy.js';
 
 export const searchMedicines = async (req: Request, res: Response) => {
-  const { query, latitude, longitude, delivery } = req.query as {
+  const { query, latitude, longitude, delivery, sort } = req.query as {
     query?: string;
     latitude?: string;
     longitude?: string;
     delivery?: string;
+    sort?: string; // 'price_asc', 'price_desc', etc.
   };
 
   try {
@@ -28,15 +29,15 @@ export const searchMedicines = async (req: Request, res: Response) => {
       .populate('medicine', 'name strength type')
       .populate({
         path: 'pharmacy',
-        select: 'name city deliveryAvailable location',
+        select: 'name city deliveryAvailable location rating',
         model: Pharmacy,
       });
 
     let results = inventory
       .filter((inv) => {
-        // Ensure pharmacy is populated and has deliveryAvailable property
         const pharmacy = inv.pharmacy as any;
-        return !delivery || (pharmacy && typeof pharmacy === 'object' && 'deliveryAvailable' in pharmacy && pharmacy.deliveryAvailable);
+        // Filter deliveryAvailable if delivery param is true
+        return !delivery || (pharmacy?.deliveryAvailable === true);
       })
       .map((inv) => {
         const pharmacy = inv.pharmacy as any;
@@ -47,9 +48,8 @@ export const searchMedicines = async (req: Request, res: Response) => {
           const lat2 = parseFloat(latitude);
           const lng2 = parseFloat(longitude);
 
-          // simple Haversine (approximate)
           const toRad = (deg: number) => (deg * Math.PI) / 180;
-          const R = 6371; // km
+          const R = 6371;
           const dLat = toRad(lat2 - lat1);
           const dLng = toRad(lng2 - lng1);
           const a =
@@ -68,17 +68,24 @@ export const searchMedicines = async (req: Request, res: Response) => {
             name: pharmacy.name,
             city: pharmacy.city,
             deliveryAvailable: pharmacy.deliveryAvailable,
-            distance: distance ? `${distance.toFixed(2)} km` : null,
+            rating: pharmacy.rating ?? null,
+            distance: distance ?? null,
           },
           available: inv.stock > 0,
         };
       });
 
-    // optional sort by distance
-    if (latitude && longitude) {
-      results.sort((a, b) =>
-        (a.pharmacy.distance || 9999) > (b.pharmacy.distance || 9999) ? 1 : -1
-      );
+    // 🧠 Sorting
+    if (sort === 'price_asc') {
+      results.sort((a, b) => a.price - b.price);
+    } else if (sort === 'price_desc') {
+      results.sort((a, b) => b.price - a.price);
+    } else if (latitude && longitude) {
+      results.sort((a, b) => {
+        const distA = a.pharmacy.distance ?? 99999;
+        const distB = b.pharmacy.distance ?? 99999;
+        return distA - distB;
+      });
     }
 
     res.json(results);
@@ -130,5 +137,28 @@ export const getPopularMedicines = async (_req: Request, res: Response) => {
   } catch (err) {
     console.error('Error fetching popular medicines:', err);
     res.status(500).json({ message: 'Failed to fetch popular medicines' });
+  }
+};
+
+
+
+export const getMedicineDetails = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const medicine = await Medicine.findById(id).populate({
+      path: 'pharmacy',
+      select: 'name phone email address city deliveryAvailable rating location',
+    });
+
+    if (!medicine) {
+       res.status(404).json({ message: 'Medicine not found' });
+       return
+    }
+
+    res.status(200).json(medicine);
+  } catch (error) {
+    console.error('Error fetching medicine details:', error);
+    res.status(500).json({ error: 'Server error' });
   }
 };
