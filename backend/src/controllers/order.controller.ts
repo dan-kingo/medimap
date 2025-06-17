@@ -51,3 +51,24 @@ export const getMyOrders = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 };
+
+export const getOrderById = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId; // Assumes auth middleware sets req.user
+    const orderId = req.params.id;
+
+    const order = await Order.findOne({ _id: orderId, user: userId })
+      .populate('items.medicine', 'name strength type')
+      .populate('items.pharmacy', 'name address phone');
+
+    if (!order) {
+       res.status(404).json({ error: 'Order not found' });
+       return
+    }
+
+    res.status(200).json(order);
+  } catch (error) {
+    console.error('Error fetching order:', error);
+    res.status(500).json({ error: 'Failed to fetch order' });
+  }
+};
