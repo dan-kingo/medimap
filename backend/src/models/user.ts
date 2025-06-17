@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema(
     password: { type: String }, // optional for password-based login
     role: { type: String, enum: ['user', 'pharmacy', 'admin'], default: 'user' },
     isVerified: { type: Boolean, default: false },
+    otp : { type: String }, // for OTP-based login
+    otpExpiresAt: { type: Date }, // for OTP expiration
   },
   { timestamps: true }
 );

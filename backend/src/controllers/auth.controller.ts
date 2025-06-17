@@ -1,16 +1,13 @@
 import { Request, Response } from 'express';
-import { sendOtp, verifyOtp } from '../utils/otp.js';
 import { generateToken } from '../utils/jwt.js';
-import User from '../models/user.js';
+import { resendOtpToUser, sendOtpToUser, verifyUserOtp } from '../utils/otp.js';
 
 export const requestOtp = async (req: Request, res: Response) => {
   const { phone } = req.body;
+  if (!phone) return res.status(400).json({ message: 'Phone is required' });
 
-  if (!phone) { res.status(400).json({ message: 'Phone is required' });
-return
-}
   try {
-    await sendOtp(phone);
+    await sendOtpToUser(phone);
     res.status(200).json({ message: 'OTP sent' });
   } catch (err) {
     console.error(err);
@@ -20,21 +17,25 @@ return
 
 export const verifyOtpAndLogin = async (req: Request, res: Response) => {
   const { phone, otp } = req.body;
-
-  if (!verifyOtp(phone, otp)) {
-     res.status(400).json({ message: 'Invalid OTP' });
-     return
+  try {
+    const user = await verifyUserOtp(phone, otp);
+    const token = generateToken(user._id.toString(), user.role);
+    res.status(200).json({ message: 'Login successful', token, user });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
   }
-
-  let user = await User.findOne({ phone });
-
-  if (!user) {
-    user = await User.create({ phone, isVerified: true }); // optional: capture name/email later
-  } else {
-    user.isVerified = true;
-    await user.save();
-  } 
-
-  const token = generateToken(user._id.toString(), user.role);
-  res.status(200).json({ message: 'Login successful', token, user });
 };
+
+export const resendOtp = async (req: Request, res: Response) => {
+  const { phone } = req.body;
+  if (!phone) return res.status(400).json({ message: 'Phone is required' });
+
+  try {
+    await resendOtpToUser(phone);
+    res.status(200).json({ message: 'OTP resent' });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+

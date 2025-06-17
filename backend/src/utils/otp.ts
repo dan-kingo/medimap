@@ -1,29 +1,84 @@
 import twilio from 'twilio';
+import User from '../models/user.js';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID!;
 const authToken = process.env.TWILIO_AUTH_TOKEN!;
 const fromPhone = process.env.TWILIO_PHONE_NUMBER!;
-
 const client = twilio(accountSid, authToken);
 
-// Simple in-memory store for dev (consider Redis for prod)
-const otpStore = new Map<string, string>();
+/**
+ * Generate a 6-digit numeric OTP.
+ */
+const generateOtp = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
-export const sendOtp = async (phone: string): Promise<boolean> => {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+/**
+ * Sends an OTP to the provided phone number and stores it in the user document.
+ */
+export const sendOtpToUser = async (phone: string): Promise<void> => {
+  const otp = generateOtp();
+  const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
-  otpStore.set(phone, otp); // store OTP temporarily (e.g., for 5–10 min)
+  let user = await User.findOne({ phone });
+
+  if (!user) {
+    user = await User.create({ phone, otp, otpExpiresAt });
+  } else {
+    user.otp = otp;
+    user.otpExpiresAt = otpExpiresAt;
+    await user.save();
+  }
 
   await client.messages.create({
     body: `Your MediMap OTP is: ${otp}`,
     from: fromPhone,
     to: phone,
   });
-
-  return true;
 };
 
-export const verifyOtp = (phone: string, otp: string): boolean => {
-  const stored = otpStore.get(phone);
-  return stored === otp;
+/**
+ * Verifies the OTP and returns the user if valid.
+ */
+export const verifyUserOtp = async (phone: string, otp: string) => {
+  const user = await User.findOne({ phone });
+
+  if (!user || user.otp !== otp) {
+    throw new Error('Invalid OTP');
+  }
+
+  if (!user.otpExpiresAt || user.otpExpiresAt < new Date()) {
+    throw new Error('OTP expired');
+  }
+
+  user.isVerified = true;
+  user.otp = undefined;
+  user.otpExpiresAt = undefined;
+  await user.save();
+
+  return user;
+};
+
+/**
+ * Resends OTP to an existing user.
+ */
+export const resendOtpToUser = async (phone: string): Promise<void> => {
+  const user = await User.findOne({ phone });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const otp = generateOtp();
+  const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+  user.otp = otp;
+  user.otpExpiresAt = otpExpiresAt;
+  await user.save();
+
+  await client.messages.create({
+    body: `Your MediMap OTP is: ${otp}`,
+    from: fromPhone,
+    to: phone,
+  });
 };
