@@ -5,12 +5,14 @@ const medicineSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     strength: { type: String }, // e.g., "500mg"
-    type: { type: String, enum: ['Tablet', 'Syrup', 'Injection'] },
+    unit: { type: String, default: '' }, // e.g., "mg", "ml"
+    type: { type: String, enum: ['Tablet', 'Syrup', 'Injection'], required: true },
     description: { type: String },
     requiresPrescription: { type: Boolean, default: false },
     price: { type: Number, required: true },
+    quantity: { type: Number, required: true, min: 0 },
+    outOfStock: { type: Boolean, default: false },
 
-    // Reference to the seller pharmacy
     pharmacy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Pharmacy',
@@ -21,4 +23,3 @@ const medicineSchema = new mongoose.Schema(
 );
 
 export default mongoose.model('Medicine', medicineSchema);
-

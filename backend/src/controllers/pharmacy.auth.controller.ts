@@ -82,10 +82,8 @@ export const loginPharmacy = async (req: Request, res: Response) => {
 };
 
 export const setupPharmacyProfile = async (req: Request, res: Response) => {
-   console.log("req.user:", req.user);
   try {
     const userId = req.user?.userId;
-    console.log(userId, "userId in setupPharmacyProfile");
     const {
       name,
       ownerName,

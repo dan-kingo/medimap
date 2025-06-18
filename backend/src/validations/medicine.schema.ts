@@ -32,3 +32,15 @@ export const searchMedicinesQuerySchema = z.object({
 export const medicineDetailsParamsSchema = z.object({
   id: z.string().length(24, 'Invalid medicine ID length').regex(/^[0-9a-fA-F]{24}$/, 'Invalid medicine ID format'),
 });
+
+
+export const medicineSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  strength: z.string().optional(),
+  unit: z.string().optional(),
+  type: z.enum(['Tablet', 'Syrup', 'Injection']),
+  description: z.string().optional(),
+  requiresPrescription: z.boolean().optional(),
+  price: z.number().positive('Price must be positive'),
+  quantity: z.number().int().nonnegative('Quantity cannot be negative'),
+});

@@ -162,3 +162,138 @@ export const getMedicineDetails = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+
+
+export const addMedicine = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const pharmacy = await Pharmacy.findOne({ user: userId });
+
+    if (!pharmacy) {
+       res.status(404).json({ error: "Pharmacy not found for this user." });
+       return
+    }
+
+    const {
+      name,
+      strength,
+      unit,
+      type,
+      description,
+      requiresPrescription,
+      price,
+      quantity,
+    } = req.body;
+
+    const outOfStock = quantity <= 0;
+
+    const newMedicine = await Medicine.create({
+      name,
+      strength,
+      unit,
+      type,
+      description,
+      requiresPrescription,
+      price,
+      quantity,
+      outOfStock,
+      pharmacy: pharmacy._id, // Correct reference
+    });
+
+    res.status(201).json({ message: 'Medicine added', medicine: newMedicine });
+  } catch (error) {
+    console.error('Add medicine error:', error);
+    res.status(500).json({ error: 'Failed to add medicine' });
+  }
+};
+
+
+export const updateMedicine = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const pharmacy = await Pharmacy.findOne({ user: userId });
+    const medicineId = req.params.id;
+    const updates = req.body;
+
+    if (updates.quantity !== undefined) {
+      updates.outOfStock = updates.quantity <= 0;
+    }
+
+    const updatedMedicine = await Medicine.findOneAndUpdate(
+      { _id: medicineId, pharmacy: pharmacy?._id },
+      updates,
+      { new: true }
+    );
+
+    if (!updatedMedicine) {
+       res.status(404).json({ error: 'Medicine not found' });
+       return
+    }
+
+    res.json({ message: 'Medicine updated', medicine: updatedMedicine });
+  } catch (error) {
+    console.error('Update medicine error:', error);
+    res.status(500).json({ error: 'Failed to update medicine' });
+  }
+};
+
+export const deleteMedicine = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const pharmacy = await Pharmacy.findOne({ user: userId });
+    const medicineId = req.params.id;
+
+    const deletedMedicine = await Medicine.findOneAndDelete({
+      _id: medicineId,
+      pharmacy: pharmacy?._id,
+    });
+
+    if (!deletedMedicine) {
+       res.status(404).json({ error: 'Medicine not found' });
+       return
+    }
+
+    res.json({ message: 'Medicine removed' });
+  } catch (error) {
+    console.error('Delete medicine error:', error);
+    res.status(500).json({ error: 'Failed to remove medicine' });
+  }
+};
+
+export const markOutOfStock = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const pharmacy = await Pharmacy.findOne({ user: userId });
+    const medicineId = req.params.id;
+
+    const medicine = await Medicine.findOne({ _id: medicineId, pharmacy: pharmacy?._id });
+
+    if (!medicine) {
+       res.status(404).json({ error: 'Medicine not found' });
+       return
+    }
+
+    medicine.outOfStock = true;
+    medicine.quantity = 0;
+    await medicine.save();
+
+    res.json({ message: 'Medicine marked as out of stock', medicine });
+  } catch (error) {
+    console.error('Mark out of stock error:', error);
+    res.status(500).json({ error: 'Failed to update medicine status' });
+  }
+};
+
+export const getMedicines = async (req: Request, res: Response) => {
+  try {
+    const pharmacyId = req.user?.userId;
+
+    const medicines = await Medicine.find({ pharmacy: pharmacyId });
+
+    res.json({ medicines });
+  } catch (error) {
+    console.error('Get medicines error:', error);
+    res.status(500).json({ error: 'Failed to get medicines' });
+  }
+};
