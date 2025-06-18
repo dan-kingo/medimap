@@ -4,6 +4,8 @@ import express from 'express';
 import { upload } from '../utils/upload';
 import { authenticateUser } from '../middlewares/authMiddleware.js';
 import { getMyOrders, getOrderById, placeOrder, updateOrderStatus } from '../controllers/order.controller.js';
+import validate from '../middlewares/validationMiddleware.js';
+import { orderIdParamSchema, placeOrderBodySchema, updateOrderStatusSchema } from '../validations/order.schema.js';
 
 const router = express.Router();
 
@@ -11,13 +13,15 @@ router.post(
   '/',
   authenticateUser,
   upload.single('prescription'),
+  validate(placeOrderBodySchema),
   placeOrder
 );
 
-router.get('/my', authenticateUser, getMyOrders); 
+router.get('/my', authenticateUser,  getMyOrders); 
 export default router;
-router.get('/:id', authenticateUser, getOrderById); 
+router.get('/:id', authenticateUser, validate(orderIdParamSchema), getOrderById); 
 router.patch(
   '/:id/status',
   authenticateUser,
+  validate(updateOrderStatusSchema),
 updateOrderStatus)

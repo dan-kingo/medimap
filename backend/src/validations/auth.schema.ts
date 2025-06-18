@@ -41,3 +41,32 @@ export const loginWithPasswordSchema = z.object({
     .string()
     .min(6, 'Password must be at least 6 characters'),
 });
+
+
+// Validation for forgotPasswordRequestOtp
+export const forgotPasswordRequestOtpSchema = z.object({
+  phone: z
+    .string({
+      required_error: 'Phone number is required',
+      invalid_type_error: 'Phone number must be a string',
+    })
+    .regex(/^(\+251|0)?9\d{8}$/, 'Invalid Ethiopian phone number format'),
+});
+
+// Validation for verifyForgotPasswordOtp
+export const verifyForgotPasswordOtpSchema = z.object({
+  phone: z
+    .string({
+      required_error: 'Phone number is required',
+      invalid_type_error: 'Phone number must be a string',
+    })
+    .regex(/^(\+251|0)?9\d{8}$/, 'Invalid Ethiopian phone number format'),
+  
+  otp: z
+    .string({
+      required_error: 'OTP is required',
+      invalid_type_error: 'OTP must be a string',
+    })
+    .length(6, 'OTP must be exactly 6 digits')
+    .regex(/^\d+$/, 'OTP must contain only numbers'),
+});
