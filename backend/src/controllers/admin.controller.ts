@@ -3,6 +3,8 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
+import ExcelJS from 'exceljs';
+import PDFDocument from 'pdfkit';
 
 import { Admin } from '../models/admin.js';
 import User  from '../models/user.js';
@@ -201,5 +203,123 @@ export const getBasicAnalytics = async (_req: Request, res: Response) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch analytics', error });
+  }
+};
+
+
+export const exportAnalyticsExcel = async (_req: Request, res: Response) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalPharmacies = await Pharmacy.countDocuments();
+    const totalOrders = await Order.countDocuments();
+
+    const mostRequestedMedicines = await Order.aggregate([
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.medicine',
+          totalOrdered: { $sum: '$items.quantity' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'medicines',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'medicineDetails',
+        },
+      },
+      { $unwind: '$medicineDetails' },
+      {
+        $project: {
+          name: '$medicineDetails.name',
+          totalOrdered: 1,
+        },
+      },
+      { $sort: { totalOrdered: -1 } },
+      { $limit: 10 },
+    ]);
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Analytics Report');
+
+    sheet.addRow(['Metric', 'Value']);
+    sheet.addRow(['Total Users', totalUsers]);
+    sheet.addRow(['Total Pharmacies', totalPharmacies]);
+    sheet.addRow(['Total Orders', totalOrders]);
+
+    sheet.addRow([]);
+    sheet.addRow(['Top 10 Most Requested Medicines']);
+    sheet.addRow(['Medicine Name', 'Quantity Ordered']);
+
+    mostRequestedMedicines.forEach((item) => {
+      sheet.addRow([item.name, item.totalOrdered]);
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=analytics.xlsx');
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to export Excel', error });
+  }
+};
+
+
+export const exportAnalyticsPDF = async (_req: Request, res: Response) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalPharmacies = await Pharmacy.countDocuments();
+    const totalOrders = await Order.countDocuments();
+
+    const mostRequestedMedicines = await Order.aggregate([
+      { $unwind: '$items' },
+      {
+        $group: {
+          _id: '$items.medicine',
+          totalOrdered: { $sum: '$items.quantity' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'medicines',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'medicineDetails',
+        },
+      },
+      { $unwind: '$medicineDetails' },
+      {
+        $project: {
+          name: '$medicineDetails.name',
+          totalOrdered: 1,
+        },
+      },
+      { $sort: { totalOrdered: -1 } },
+      { $limit: 10 },
+    ]);
+
+    const doc = new PDFDocument();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=analytics.pdf');
+    doc.pipe(res);
+
+    doc.fontSize(20).text('MediMap Analytics Report', { align: 'center' });
+    doc.moveDown();
+
+    doc.fontSize(12).text(`Total Users: ${totalUsers}`);
+    doc.text(`Total Pharmacies: ${totalPharmacies}`);
+    doc.text(`Total Orders: ${totalOrders}`);
+
+    doc.moveDown().fontSize(14).text('Top 10 Most Requested Medicines');
+    doc.fontSize(12);
+    mostRequestedMedicines.forEach((item, i) => {
+      doc.text(`${i + 1}. ${item.name} — ${item.totalOrdered} ordered`);
+    });
+
+    doc.end();
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to export PDF', error });
   }
 };
