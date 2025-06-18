@@ -13,6 +13,7 @@ import homeRoutes from './routes/home.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import pharmacyAuthRoutes from './routes/pharmacy.auth.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 
 const appDebug = debug('app:startup');
 const app = express();
@@ -32,6 +33,8 @@ app.use('/api/medicines', medicineRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/pharmacy', pharmacyAuthRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use("/api/admin", adminRoutes)
+
 app.listen(PORT, () => {
   appDebug(`Server is running on http://localhost:${PORT}`);
 }
