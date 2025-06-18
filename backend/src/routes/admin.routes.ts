@@ -1,13 +1,14 @@
 // src/routes/adminAuth.routes.ts
 import express from 'express';
-import { adminLogin, approvePharmacy, createMedicine, deleteMedicine, getAllMedicines, getAllOrders, getAllUsers, getPendingPharmacies, rejectPharmacy, togglePharmacyActiveStatus, updateMedicine } from '../controllers/admin.controller';
+import { adminLogin, approvePharmacy, createMedicine, deleteMedicine, getAllMedicines, getAllOrders, getAllUsers, getBasicAnalytics, getPendingPharmacies, rejectPharmacy, togglePharmacyActiveStatus, updateMedicine } from '../controllers/admin.controller';
 import { verifyAdmin } from '../middlewares/adminMiddleware';
 
 const router = express.Router();
 router.use(verifyAdmin);
 
-router.get('/manage/users', getAllUsers);
 router.post('/login', adminLogin);
+router.get('/analytics', getBasicAnalytics);
+router.get('/manage/users', getAllUsers);
 router.get('/manage/pharmacies/pending', getPendingPharmacies);
 router.put('/manage/pharmacies/:id/approve', approvePharmacy);
 router.put('/manage/pharmacies/:id/reject', rejectPharmacy);

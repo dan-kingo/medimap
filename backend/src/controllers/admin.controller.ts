@@ -79,9 +79,6 @@ export const togglePharmacyActiveStatus = async (req: Request, res: Response) =>
   res.json({ message: `Pharmacy ${pharmacy.isActive ? 'activated' : 'deactivated'}` });
 };
 
-// src/controllers/adminOrders.controller.ts
-
-
 export const getAllOrders = async (req: Request, res: Response) => {
   try {
     const { startDate, endDate, pharmacyId, userId, status } = req.query;
@@ -116,8 +113,6 @@ export const getAllOrders = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Failed to retrieve orders', error });
   }
 };
-
-
 
 export const createMedicine = async (req: Request, res: Response) => {
   try {
@@ -161,5 +156,50 @@ export const deleteMedicine = async (req: Request, res: Response) => {
     res.json({ message: 'Medicine deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Failed to delete medicine', error });
+  }
+};
+
+
+export const getBasicAnalytics = async (_req: Request, res: Response) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalPharmacies = await Pharmacy.countDocuments();
+    const totalOrders = await Order.countDocuments();
+
+    const mostRequestedMedicines = await Order.aggregate([
+      { $unwind: '$items' }, // adjust if your order schema has a nested 'items' array
+      {
+        $group: {
+          _id: '$items.medicine',
+          totalOrdered: { $sum: '$items.quantity' },
+        },
+      },
+      {
+        $lookup: {
+          from: 'medicines',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'medicineDetails',
+        },
+      },
+      { $unwind: '$medicineDetails' },
+      {
+        $project: {
+          name: '$medicineDetails.name',
+          totalOrdered: 1,
+        },
+      },
+      { $sort: { totalOrdered: -1 } },
+      { $limit: 10 },
+    ]);
+
+    res.json({
+      totalUsers,
+      totalPharmacies,
+      totalOrders,
+      mostRequestedMedicines,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch analytics', error });
   }
 };
