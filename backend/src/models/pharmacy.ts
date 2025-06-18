@@ -28,7 +28,8 @@ const pharmacySchema = new mongoose.Schema(
       type: String,
       enum: ['pending', 'approved', 'rejected'],
       default: 'pending'
-    }
+    },
+    isActive: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
