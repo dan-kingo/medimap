@@ -32,8 +32,11 @@ const orderSchema = new mongoose.Schema(
 ],
     prescriptionUrl: { type: String },
     paymentMethod: { type: String, enum: ['COD'], default: 'COD' },
+    rejectionReason: { type: String },
   },
   { timestamps: true }
 );
+
+orderSchema.index({ location: '2dsphere' }, { sparse: true });
 
 export default mongoose.model('Order', orderSchema);

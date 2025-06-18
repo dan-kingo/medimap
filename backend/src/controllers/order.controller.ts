@@ -97,3 +97,60 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to update order status' });
   }
 };
+
+
+export const getIncomingOrders = async (req: Request, res: Response) => {
+  try {
+    const pharmacyId = req.user?.userId;
+
+    const orders = await Order.find({ 'items.pharmacy': pharmacyId })
+      .populate('user', 'name address')
+      .populate('items.medicine', 'name')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ orders });
+  } catch (error) {
+    console.error('Fetching orders error:', error);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+};
+
+export const updateOrderStatuses = async (req: Request, res: Response) => {
+  try {
+    const { orderId, status, rejectionReason } = req.body;
+    const pharmacyId = req.user?.userId;
+
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+       res.status(404).json({ error: 'Order not found' });
+       return
+    }
+
+    const belongsToPharmacy = order.items.some((item) =>
+      item.pharmacy.toString() === pharmacyId
+    );
+
+    if (!belongsToPharmacy) {
+       res.status(403).json({ error: 'Unauthorized access' });
+       return
+    }
+
+    order.status = status;
+
+    if (status === 'Cancelled' && rejectionReason) {
+      order.notifications.push({
+        type: 'Rejection',
+        message: rejectionReason,
+        sentAt: new Date(),
+      });
+    }
+
+    await order.save();
+
+    res.status(200).json({ message: `Order ${status}`, order });
+  } catch (error) {
+    console.error('Update order status error:', error);
+    res.status(500).json({ error: 'Failed to update order' });
+  }
+};
