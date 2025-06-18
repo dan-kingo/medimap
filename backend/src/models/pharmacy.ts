@@ -1,12 +1,15 @@
 import mongoose from "mongoose";
 
 const pharmacySchema = new mongoose.Schema(
-  {
+  { 
     name: { type: String, required: true },
+    ownerName: { type: String, required: false },
+    licenseNumber: { type: String, required: false }, // remove unique from here
     phone: { type: String },
     email: { type: String },
     address: { type: String, default: "" },
     city: { type: String, default: "" },
+    woreda: { type: String, default: "" },
     location: {
       type: {
         type: String,
@@ -25,7 +28,10 @@ const pharmacySchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Only create geo index if coordinates exist
+// Fix 1: Add unique sparse index for licenseNumber
+pharmacySchema.index({ licenseNumber: 1 }, { unique: true, sparse: true });
+
+// Fix 2: Retain geo index
 pharmacySchema.index({ location: "2dsphere" }, { sparse: true });
 
 export default mongoose.model("Pharmacy", pharmacySchema);

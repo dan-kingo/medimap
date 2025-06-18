@@ -1,16 +1,15 @@
 // src/controllers/pharmacyAuthController.ts
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 
 import User from '../models/user.js'
 import Pharmacy from '../models/pharmacy.js';
+import { generateToken } from '../utils/jwt.js';
 
-const JWT_SECRET = process.env.JWT_SECRET!
-// src/controllers/pharmacyAuthController.ts
 
 
 export const registerPharmacy = async (req: Request, res: Response) => {
+  
   try {
     const { name, email, password, phone } = req.body;
 
@@ -38,11 +37,7 @@ export const registerPharmacy = async (req: Request, res: Response) => {
       // address, city, location, deliveryAvailable will be added later
     });
 
-    const token = jwt.sign(
-      { _id: newUser._id, role: newUser.role },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+      const token = generateToken(newUser._id.toString(), newUser.role);
 
     res.status(201).json({
       token,
@@ -77,10 +72,58 @@ export const loginPharmacy = async (req: Request, res: Response) => {
 
     return }
 
-    const token = jwt.sign({ _id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+  const token = generateToken(user._id.toString(), user.role);
+  
 
     res.status(200).json({ token, user: { _id: user._id, name: user.name, email: user.email, role: user.role } });
   } catch (error) {
     res.status(500).json({ error: 'Login failed' });
+  }
+};
+
+export const setupPharmacyProfile = async (req: Request, res: Response) => {
+   console.log("req.user:", req.user);
+  try {
+    const userId = req.user?.userId;
+    console.log(userId, "userId in setupPharmacyProfile");
+    const {
+      name,
+      ownerName,
+      licenseNumber,
+      phone,
+      email,
+      address,
+      city,
+      woreda,
+      location,
+      deliveryAvailable,
+    } = req.body;
+
+    const pharmacy = await Pharmacy.findOneAndUpdate(
+      { user: userId },
+      {
+        name,
+        ownerName,
+        licenseNumber,
+        phone,
+        email,
+        address,
+        city,
+        woreda,
+        location,
+        deliveryAvailable,
+      },
+      { new: true }
+    );
+
+    if (!pharmacy) {
+       res.status(404).json({ message: "Pharmacy not found for this user." });
+       return
+    }
+
+    res.status(200).json({ message: "Pharmacy profile updated", pharmacy });
+  } catch (error) {
+    console.error("Pharmacy profile setup error:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };

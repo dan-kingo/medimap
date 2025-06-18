@@ -29,7 +29,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/pharmacies/nearby', homeRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/pharmacy/auth', pharmacyAuthRoutes);
+app.use('/api/pharmacy', pharmacyAuthRoutes);
 
 app.listen(PORT, () => {
   appDebug(`Server is running on http://localhost:${PORT}`);
