@@ -2,9 +2,12 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+
 import { Admin } from '../models/admin.js';
 import User  from '../models/user.js';
 import Pharmacy from '../models/pharmacy.js';
+import Order  from '../models/order.js';
 
 export const adminLogin = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -73,4 +76,42 @@ export const togglePharmacyActiveStatus = async (req: Request, res: Response) =>
   pharmacy.isActive = !pharmacy.isActive;
   await pharmacy.save();
   res.json({ message: `Pharmacy ${pharmacy.isActive ? 'activated' : 'deactivated'}` });
+};
+
+// src/controllers/adminOrders.controller.ts
+
+
+export const getAllOrders = async (req: Request, res: Response) => {
+  try {
+    const { startDate, endDate, pharmacyId, userId, status } = req.query;
+
+    const filters: any = {};
+
+    if (status) {
+      filters.status = status;
+    }
+
+    if (pharmacyId && mongoose.Types.ObjectId.isValid(pharmacyId as string)) {
+      filters.pharmacy = pharmacyId;
+    }
+
+    if (userId && mongoose.Types.ObjectId.isValid(userId as string)) {
+      filters.user = userId;
+    }
+
+    if (startDate || endDate) {
+      filters.createdAt = {};
+      if (startDate) filters.createdAt.$gte = new Date(startDate as string);
+      if (endDate) filters.createdAt.$lte = new Date(endDate as string);
+    }
+
+    const orders = await Order.find(filters)
+      .populate('user', 'name phone')
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ message: 'Failed to retrieve orders', error });
+  }
 };
