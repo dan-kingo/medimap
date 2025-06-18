@@ -169,3 +169,28 @@ export const updateOrderStatuses = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to update order' });
   }
 };
+
+
+export const getSalesOverview = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const pharmacy = await User.findById(userId).select('pharmacy');
+
+    const allOrders = await Order.find({ 'items.pharmacy': pharmacy?._id });
+
+    const totalOrders = allOrders.length;
+    const placed = allOrders.filter(order => order.status === 'Placed').length;
+    const delivered = allOrders.filter(order => order.status === 'Delivered').length;
+    const cancelled = allOrders.filter(order => order.status === 'Cancelled').length;
+
+    res.status(200).json({
+      totalOrders,
+      placed,
+      delivered,
+      cancelled
+    });
+  } catch (error) {
+    console.error('Error fetching sales overview:', error);
+    res.status(500).json({ error: 'Failed to fetch sales overview' });
+  }
+};

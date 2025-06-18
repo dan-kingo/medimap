@@ -3,7 +3,7 @@ import express from 'express';
 
 import { upload } from '../utils/upload';
 import { authenticateUser } from '../middlewares/authMiddleware.js';
-import { getIncomingOrders, getMyOrders, getOrderById, placeOrder, updateOrderStatus, updateOrderStatuses } from '../controllers/order.controller.js';
+import { getIncomingOrders, getMyOrders, getOrderById, getSalesOverview, placeOrder, updateOrderStatus, updateOrderStatuses } from '../controllers/order.controller.js';
 import validate from '../middlewares/validationMiddleware.js';
 import { placeOrderBodySchema, updateOrderStatusSchema } from '../validations/order.schema.js';
 
@@ -28,3 +28,4 @@ updateOrderStatus)
 
 router.get('/', authenticateUser, getIncomingOrders);
 router.post('/status', authenticateUser, validate(updateOrderStatusSchema), updateOrderStatuses);
+router.get('/sales-review', authenticateUser, getSalesOverview);

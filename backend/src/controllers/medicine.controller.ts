@@ -240,13 +240,6 @@ export const updateMedicine = async (req: Request, res: Response) => {
        return
     }
 
-    if(quantity < 5) {
-    await createNotification({
-      userId: userId!,
-      message: `Low stock alert for ${newMedicine.name}. Only ${quantity} left.`,
-      type: 'in-app',
-    });
-  }
     res.json({ message: 'Medicine updated', medicine: updatedMedicine });
   } catch (error) {
     console.error('Update medicine error:', error);
