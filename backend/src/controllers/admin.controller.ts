@@ -8,6 +8,7 @@ import { Admin } from '../models/admin.js';
 import User  from '../models/user.js';
 import Pharmacy from '../models/pharmacy.js';
 import Order  from '../models/order.js';
+import { AdminMedicine } from '../models/adminMedicine.js';
 
 export const adminLogin = async (req: Request, res: Response) => {
   const { email, password } = req.body;
@@ -113,5 +114,52 @@ export const getAllOrders = async (req: Request, res: Response) => {
   } catch (error) {
     console.log(error)
     res.status(500).json({ message: 'Failed to retrieve orders', error });
+  }
+};
+
+
+
+export const createMedicine = async (req: Request, res: Response) => {
+  try {
+    const med = await AdminMedicine.create(req.body);
+    res.status(201).json(med);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to create medicine', error });
+  }
+};
+
+export const getAllMedicines = async (_req: Request, res: Response) => {
+  try {
+    const meds = await AdminMedicine.find().sort({ name: 1 });
+    res.json(meds);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch medicines', error });
+  }
+};
+
+export const updateMedicine = async (req: Request, res: Response) => {
+  try {
+    const med = await AdminMedicine.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!med) 
+      {
+         res.status(404).json({ message: 'Medicine not found' });
+          return;   }
+
+    res.json(med);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to update medicine', error });
+  }
+};
+
+export const deleteMedicine = async (req: Request, res: Response) => {
+  try {
+    const med = await AdminMedicine.findByIdAndDelete(req.params.id);
+    if (!med) 
+      {
+         res.status(404).json({ message: 'Medicine not found' });
+          return;   }
+    res.json({ message: 'Medicine deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to delete medicine', error });
   }
 };
