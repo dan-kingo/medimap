@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import Medicine from '../models/medicine.js';
 import Inventory from '../models/inventory.js';
 import Pharmacy from '../models/pharmacy.js';
+import { createNotification } from '../utils/notification.js';
 
 export const searchMedicines = async (req: Request, res: Response) => {
   const { query, latitude, longitude, delivery, sort } = req.query as {
@@ -201,7 +202,15 @@ export const addMedicine = async (req: Request, res: Response) => {
       pharmacy: pharmacy._id, // Correct reference
     });
 
-    res.status(201).json({ message: 'Medicine added', medicine: newMedicine });
+  if(quantity < 5) {
+    await createNotification({
+      userId: userId!,
+      message: `Low stock alert for ${newMedicine.name}. Only ${quantity} left.`,
+      type: 'in-app',
+    });
+  }
+
+  res.status(201).json({ message: 'Medicine added', medicine: newMedicine });
   } catch (error) {
     console.error('Add medicine error:', error);
     res.status(500).json({ error: 'Failed to add medicine' });
@@ -231,6 +240,13 @@ export const updateMedicine = async (req: Request, res: Response) => {
        return
     }
 
+    if(quantity < 5) {
+    await createNotification({
+      userId: userId!,
+      message: `Low stock alert for ${newMedicine.name}. Only ${quantity} left.`,
+      type: 'in-app',
+    });
+  }
     res.json({ message: 'Medicine updated', medicine: updatedMedicine });
   } catch (error) {
     console.error('Update medicine error:', error);

@@ -1,37 +1,46 @@
 // src/controllers/orderController.ts
 import { Request, Response } from 'express';
 import Order from '../models/order.js'
-import { notifyUserOrderStatus } from '../utils/notification.js';
+import { createNotification, notifyUserOrderStatus } from '../utils/notification.js';
 import User from '../models/user.js';
 
 export const placeOrder = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.userId; // Assumes auth middleware sets req.user
-    const {
-      items,
-      deliveryType,
-      address,
-      location, // { type: 'Point', coordinates: [lng, lat] }
-      paymentMethod
-    } = req.body;
+const userId = req.user?.userId; // Assumes auth middleware sets req.user
+if (!userId) {
+  res.status(401).json({ error: 'Unauthorized: userId missing' });
+  return;
+}
+const {
+  items,
+  deliveryType,
+  address,
+  location, // { type: 'Point', coordinates: [lng, lat] }
+  paymentMethod
+} = req.body;
 
-    const prescriptionUrl = req.file ? `/uploads/prescriptions/${req.file.filename}` : null;
+const prescriptionUrl = req.file ? `/uploads/prescriptions/${req.file.filename}` : null;
 
-    const order = await Order.create({
-      user: userId,
-      items,
-      deliveryType,
-      address,
-      location,
-      status: 'Placed',
-      paymentMethod: paymentMethod || 'COD',
-      prescriptionUrl,
-    });
+const order = await Order.create({
+  user: userId,
+  items,
+  deliveryType,
+  address,
+  location,
+  status: 'Placed',
+  paymentMethod: paymentMethod || 'COD',
+  prescriptionUrl,
+});
 
-    res.status(201).json({
-      message: 'Order placed successfully',
-      orderId: order._id,
-    });
+res.status(201).json({
+  message: 'Order placed successfully',
+  orderId: order._id,
+});
+
+await createNotification({
+  userId,
+  message: 'Your order has been placed successfully.'
+});
   } catch (err) {
     console.error('Error placing order:', err);
     res.status(500).json({ error: 'Something went wrong' });
@@ -92,6 +101,12 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
       await notifyUserOrderStatus(order._id.toString(), status, user.phone);
     }
 
+      if (user?._id) {
+      await createNotification({
+        userId: user._id.toString(),
+        message: `Your order status has been updated to "${status}".`,
+      });
+    }
     res.json({ message: 'Order status updated' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update order status' });

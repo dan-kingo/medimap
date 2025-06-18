@@ -2,6 +2,8 @@
 
 import { sendSms } from "./twilo.js";
 import Order from "../models/order.js"
+import Notification from '../models/notification.js';
+
 
 export const notifyUserOrderStatus = async (orderId: string, newStatus: string, userPhone: string) => {
   const statusMessages: Record<string, string> = {
@@ -27,4 +29,18 @@ export const notifyUserOrderStatus = async (orderId: string, newStatus: string, 
   } catch (err) {
     console.error('Notification error:', err);
   }
+};
+
+
+
+export const createNotification = async ({
+  userId,
+  message,
+  type = 'in-app'
+}: {
+  userId: string;
+  message: string;
+  type?: 'sms' | 'in-app';
+}) => {
+  await Notification.create({ user: userId, message, type });
 };

@@ -12,6 +12,7 @@ import medicineRoutes from './routes/medicine.routes.js';
 import homeRoutes from './routes/home.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import pharmacyAuthRoutes from './routes/pharmacy.auth.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 const appDebug = debug('app:startup');
 const app = express();
@@ -30,7 +31,7 @@ app.use('/api/pharmacies/nearby', homeRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/pharmacy', pharmacyAuthRoutes);
-
+app.use('/api/notifications', notificationRoutes);
 app.listen(PORT, () => {
   appDebug(`Server is running on http://localhost:${PORT}`);
 }
