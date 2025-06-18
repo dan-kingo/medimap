@@ -24,6 +24,11 @@ const pharmacySchema = new mongoose.Schema(
     deliveryAvailable: { type: Boolean, default: false },
     rating: { type: Number, default: 4 },
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    }
   },
   { timestamps: true }
 );
