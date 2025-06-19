@@ -21,7 +21,7 @@ const Profile: React.FC = () => {
   
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<'success' | 'error'>('success')
-  const { mutate: updateProfile, loading } = useApiMutation()
+  const { loading } = useApiMutation()
 
   useEffect(() => {
     // Load saved profile data from localStorage or API
@@ -49,7 +49,7 @@ const Profile: React.FC = () => {
         }
       }
 
-      await updateProfile('/pharmacy/update-profile', profileData)
+      profileAPI.updateProfile(profileData)
       
       // Save to localStorage for persistence
       localStorage.setItem('pharmacyProfile', JSON.stringify(formData))
@@ -102,7 +102,7 @@ const Profile: React.FC = () => {
           setMessageType('success')
           setTimeout(() => setMessage(''), 3000)
         },
-        (error) => {
+        (_error) => {
           setMessage('Unable to get your location. Please enter coordinates manually.')
           setMessageType('error')
           setTimeout(() => setMessage(''), 5000)
