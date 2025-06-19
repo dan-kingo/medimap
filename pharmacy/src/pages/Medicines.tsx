@@ -22,22 +22,23 @@ const Medicines: React.FC = () => {
   const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null)
 
   const { data, loading, error, refetch } = useApi<{ medicines: Medicine[] }>('/medicines')
-  const { mutate: addMedicine, loading: addLoading } = useApiMutation()
-  const { mutate: updateMedicine, loading: updateLoading } = useApiMutation()
-  const { mutate: deleteMedicine, loading: deleteLoading } = useApiMutation()
+  const { loading: addLoading } = useApiMutation()
+  const {  loading: updateLoading } = useApiMutation()
+  const { loading: deleteLoading } = useApiMutation()
 
-  const medicines = data?.medicines || []
+// Remove getAllMedicines and use the data from useApi hook
+const medicines = data?.medicines || []
 
-  const filteredMedicines = medicines.filter(medicine => {
-    const matchesSearch = medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         medicine.type.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = !typeFilter || medicine.type.toLowerCase() === typeFilter.toLowerCase()
-    return matchesSearch && matchesType
-  })
+const filteredMedicines = medicines.filter(medicine => {
+  const matchesSearch = medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       medicine.type.toLowerCase().includes(searchTerm.toLowerCase())
+  const matchesType = !typeFilter || medicine.type.toLowerCase() === typeFilter.toLowerCase()
+  return matchesSearch && matchesType
+})
 
   const handleAddMedicine = async (formData: any) => {
     try {
-      await addMedicine('/medicines', formData, { method: 'POST' })
+      await medicineAPI.addMedicine(formData)
       setShowAddModal(false)
       refetch()
     } catch (error) {
@@ -47,7 +48,7 @@ const Medicines: React.FC = () => {
 
   const handleUpdateMedicine = async (id: string, formData: any) => {
     try {
-      await updateMedicine(`/medicines/${id}`, formData, { method: 'PUT' })
+      await medicineAPI.updateMedicine(id, formData)
       setEditingMedicine(null)
       refetch()
     } catch (error) {
@@ -58,7 +59,7 @@ const Medicines: React.FC = () => {
   const handleDeleteMedicine = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this medicine?')) {
       try {
-        await deleteMedicine(`/medicines/${id}`, undefined, { method: 'DELETE' })
+        await medicineAPI.deleteMedicine(id)
         refetch()
       } catch (error) {
         console.error('Error deleting medicine:', error)
@@ -68,7 +69,7 @@ const Medicines: React.FC = () => {
 
   const handleMarkOutOfStock = async (id: string) => {
     try {
-      await updateMedicine(`/medicines/${id}/out-of-stock`, undefined, { method: 'PATCH' })
+      await medicineAPI.markOutOfStock(id)
       refetch()
     } catch (error) {
       console.error('Error marking out of stock:', error)

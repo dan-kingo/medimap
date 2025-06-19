@@ -1,7 +1,9 @@
+// Updated Dashboard.tsx
 import React, { useEffect, useState } from 'react'
-import { Package, ShoppingCart, TrendingUp, AlertCircle, Eye } from 'lucide-react'
+import { Package, ShoppingCart, TrendingUp, AlertCircle, Eye, PlusCircle } from 'lucide-react'
 import { useApi } from '../hooks/useApi'
 import { medicineAPI, orderAPI } from '../services/api'
+import { useNavigate } from 'react-router-dom'
 
 interface SalesData {
   totalOrders: number
@@ -39,6 +41,7 @@ interface Order {
 }
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate()
   const [salesData, setSalesData] = useState<SalesData>({
     totalOrders: 0,
     placed: 0,
@@ -46,7 +49,7 @@ const Dashboard: React.FC = () => {
     cancelled: 0
   })
 
-  const { data: medicines, loading: medicinesLoading } = useApi<{ medicines: Medicine[] }>('/medicines')
+  const { data: medicines, loading: medicinesLoading, refetch: refetchMedicines } = useApi<{ medicines: Medicine[] }>('/medicines')
   const { data: orders, loading: ordersLoading } = useApi<{ orders: Order[] }>('/orders')
 
   useEffect(() => {
@@ -61,6 +64,16 @@ const Dashboard: React.FC = () => {
 
     fetchSalesData()
   }, [])
+
+  const handleDeleteMedicine = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this medicine?')) return
+    try {
+      await medicineAPI.deleteMedicine(id)
+      refetchMedicines()
+    } catch (err) {
+      console.error('Failed to delete medicine', err)
+    }
+  }
 
   const stats = [
     {
@@ -98,16 +111,11 @@ const Dashboard: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'placed':
-        return 'badge-warning'
-      case 'processing':
-        return 'badge-primary'
-      case 'delivered':
-        return 'badge-success'
-      case 'cancelled':
-        return 'badge-error'
-      default:
-        return 'badge-gray'
+      case 'placed': return 'badge-warning'
+      case 'processing': return 'badge-primary'
+      case 'delivered': return 'badge-success'
+      case 'cancelled': return 'badge-error'
+      default: return 'badge-gray'
     }
   }
 
@@ -126,7 +134,6 @@ const Dashboard: React.FC = () => {
         <p className="text-gray-600">Welcome back! Here's what's happening with your pharmacy.</p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon
@@ -138,21 +145,9 @@ const Dashboard: React.FC = () => {
                     <p className="text-sm font-medium text-gray-600">{stat.name}</p>
                     <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                   </div>
-                  <div className={`p-3 rounded-full ${
-                    stat.changeType === 'positive' ? 'bg-success-100' : 'bg-error-100'
-                  }`}>
-                    <Icon className={`h-6 w-6 ${
-                      stat.changeType === 'positive' ? 'text-success-600' : 'text-error-600'
-                    }`} />
+                  <div className={`p-3 rounded-full ${stat.changeType === 'positive' ? 'bg-success-100' : 'bg-error-100'}`}>
+                    <Icon className={`h-6 w-6 ${stat.changeType === 'positive' ? 'text-success-600' : 'text-error-600'}`} />
                   </div>
-                </div>
-                <div className="mt-4">
-                  <span className={`text-sm font-medium ${
-                    stat.changeType === 'positive' ? 'text-success-600' : 'text-error-600'
-                  }`}>
-                    {stat.change}
-                  </span>
-                  <span className="text-sm text-gray-500 ml-1">from last month</span>
                 </div>
               </div>
             </div>
@@ -161,7 +156,6 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Recent Orders */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
@@ -173,20 +167,12 @@ const Dashboard: React.FC = () => {
                   <div key={order._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex-1">
                       <p className="font-medium text-gray-900">{order.user.name}</p>
-                      <p className="text-sm text-gray-600">
-                        {order.items.length} item{order.items.length > 1 ? 's' : ''} • {order.deliveryType}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </p>
+                      <p className="text-sm text-gray-600">{order.items.length} item{order.items.length > 1 ? 's' : ''} • {order.deliveryType}</p>
+                      <p className="text-xs text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-gray-900">
-                        ${order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
-                      </p>
-                      <span className={`badge ${getStatusBadge(order.status)}`}>
-                        {order.status}
-                      </span>
+                      <p className="font-medium text-gray-900">${order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}</p>
+                      <span className={`badge ${getStatusBadge(order.status)}`}>{order.status}</span>
                     </div>
                   </div>
                 ))}
@@ -200,7 +186,6 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Low Stock Alert */}
         <div className="card">
           <div className="card-header">
             <h3 className="text-lg font-semibold text-gray-900">Low Stock Alert</h3>
@@ -217,6 +202,12 @@ const Dashboard: React.FC = () => {
                     <div className="text-right">
                       <p className="text-lg font-bold text-warning-600">{item.quantity}</p>
                       <p className="text-xs text-gray-500">in stock</p>
+                      <button
+                        className="text-xs text-error-600 hover:underline"
+                        onClick={() => handleDeleteMedicine(item._id)}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -231,26 +222,25 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div className="card">
         <div className="card-header">
           <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
         </div>
         <div className="card-body">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button className="btn-primary">
-              <Package className="h-4 w-4 mr-2" />
+            <button className="btn-primary" onClick={() => navigate('/medicines/add')}>
+              <PlusCircle className="h-4 w-4 mr-2" />
               Add Medicine
             </button>
-            <button className="btn-secondary">
+            <button className="btn-secondary" onClick={() => navigate('/orders')}>
               <Eye className="h-4 w-4 mr-2" />
               View Orders
             </button>
-            <button className="btn-secondary">
+            <button className="btn-secondary" onClick={() => navigate('/sales-report')}>
               <TrendingUp className="h-4 w-4 mr-2" />
               Sales Report
             </button>
-            <button className="btn-secondary">
+            <button className="btn-secondary" onClick={() => navigate('/medicines?filter=low-stock')}>
               <AlertCircle className="h-4 w-4 mr-2" />
               Stock Alert
             </button>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import axios, { AxiosRequestConfig, AxiosResponse } from 'axios'
+import {  AxiosRequestConfig, AxiosResponse } from 'axios'
+import api from '../services/api'
 
 interface ApiState<T> {
   data: T | null
@@ -21,7 +22,7 @@ export function useApi<T>(
   const fetchData = async () => {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }))
-      const response: AxiosResponse<T> = await axios(url, options)
+      const response: AxiosResponse<T> = await api(url, options)
       setState({ data: response.data, loading: false, error: null })
     } catch (error: any) {
       setState({
@@ -52,7 +53,7 @@ export function useApiMutation<T, P = any>() {
   const mutate = async (url: string, data?: P, options?: AxiosRequestConfig) => {
     try {
       setState({ data: null, loading: true, error: null })
-      const response: AxiosResponse<T> = await axios({
+      const response: AxiosResponse<T> = await api({
         url,
         method: 'POST',
         data,
