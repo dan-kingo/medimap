@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import axios from 'axios'
+import { authAPI } from '../services/api'
 
 interface User {
   _id: string
@@ -44,26 +44,35 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
-      // You might want to validate the token here
+    const initAuth = async () => {
+      const storedToken = localStorage.getItem('token')
+      const storedUser = localStorage.getItem('user')
+      
+      if (storedToken && storedUser) {
+        try {
+          setToken(storedToken)
+          setUser(JSON.parse(storedUser))
+        } catch (error) {
+          console.error('Error parsing stored user:', error)
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+        }
+      }
+      setLoading(false)
     }
-    setLoading(false)
-  }, [token])
+
+    initAuth()
+  }, [])
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post('/api/pharmacy/auth/login', {
-        email,
-        password,
-      })
-      
+      const response = await authAPI.login(email, password)
       const { token: newToken, user: userData } = response.data
       
       setToken(newToken)
       setUser(userData)
       localStorage.setItem('token', newToken)
-      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+      localStorage.setItem('user', JSON.stringify(userData))
     } catch (error) {
       throw error
     }
@@ -71,14 +80,13 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const register = async (data: RegisterData) => {
     try {
-      const response = await axios.post('/api/pharmacy/auth/register', data)
-      
+      const response = await authAPI.register(data)
       const { token: newToken, user: userData } = response.data
       
       setToken(newToken)
       setUser(userData)
       localStorage.setItem('token', newToken)
-      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`
+      localStorage.setItem('user', JSON.stringify(userData))
     } catch (error) {
       throw error
     }
@@ -88,7 +96,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setUser(null)
     setToken(null)
     localStorage.removeItem('token')
-    delete axios.defaults.headers.common['Authorization']
+    localStorage.removeItem('user')
   }
 
   const value = {
