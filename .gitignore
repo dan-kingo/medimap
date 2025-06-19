@@ -3,3 +3,5 @@ backend/src/dist/
 # Logs
 backend/src/logs
 .env
+
+pharmacy/.vite
