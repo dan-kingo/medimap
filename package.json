@@ -1,0 +1,30 @@
+{
+  "name": "medimap-monorepo",
+  "version": "1.0.0",
+  "description": "MediMap - Digital health platform monorepo",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "pharmacy"
+  ],
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:pharmacy": "cd pharmacy && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:pharmacy\"",
+    "build:backend": "cd backend && npm run build",
+    "build:pharmacy": "cd pharmacy && npm run build",
+    "build": "npm run build:backend && npm run build:pharmacy",
+    "install:all": "npm install && cd backend && npm install && cd ../pharmacy && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "healthcare",
+    "pharmacy",
+    "medicine",
+    "monorepo"
+  ],
+  "author": "Dan-Kingo",
+  "license": "MIT"
+}
