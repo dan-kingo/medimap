@@ -45,3 +45,24 @@ export const getUnreadCount = async (req:Request, res:Response) => {
     res.status(500).json({ error: 'Failed to fetch count' });
   }
 };
+
+export const markAllAsRead = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+       res.status(401).json({ error: 'Unauthorized' });
+       return
+    }
+
+    await Notification.updateMany(
+      { user: userId, isRead: false },
+      { $set: { isRead: true } }
+    );
+
+    res.status(200).json({ message: 'All notifications marked as read' });
+  } catch (error) {
+    console.error('Error marking notifications as read:', error);
+    res.status(500).json({ error: 'Failed to mark notifications as read' });
+  }
+};
