@@ -61,7 +61,7 @@ export const loginPharmacy = async (req: Request, res: Response) => {
       res.status(404).json({ error: "Pharmacy not found" });
       return;
     }
-    if (pharmacy.status !== "approved") {
+    if (!pharmacy.isActive ) {
       res.status(403).json({ message: "Account not yet approved" });
       return;
     }

@@ -296,9 +296,10 @@ export const markOutOfStock = async (req: Request, res: Response) => {
 
 export const getMedicines = async (req: Request, res: Response) => {
   try {
-    const pharmacyId = req.user?.userId;
+    const userId = req.user?.userId;
+    const pharmacy = await Pharmacy.findOne({ user: userId });
 
-    const medicines = await Medicine.find({ pharmacy: pharmacyId });
+    const medicines = await Medicine.find({ pharmacy: pharmacy?._id });
 
     res.json({ medicines });
   } catch (error) {
