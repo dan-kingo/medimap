@@ -9,6 +9,7 @@ import { placeOrderBodySchema, updateOrderStatusSchema } from '../validations/or
 
 const router = express.Router();
 
+router.get('/sales-review', authenticateUser, getSalesOverview);
 router.post(
   '/',
   authenticateUser,
@@ -25,7 +26,6 @@ router.patch(
   authenticateUser,
   validate(updateOrderStatusSchema),
 updateOrderStatus)
-
+ 
 router.get('/', authenticateUser, getIncomingOrders);
 router.post('/status', authenticateUser, validate(updateOrderStatusSchema), updateOrderStatuses);
-router.get('/sales-review', authenticateUser, getSalesOverview);
