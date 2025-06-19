@@ -1,4 +1,3 @@
-import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from 'react-query'
 import AuthProvider from './contexts/AuthContext'
@@ -10,6 +9,7 @@ import Dashboard from './pages/Dashboard'
 import Medicines from './pages/Medicines'
 import Orders from './pages/Orders'
 import Profile from './pages/Profile'
+import SalesReport from './pages/SalesReport'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,6 +38,7 @@ function App() {
                         <Route path="/" element={<Navigate to="/dashboard" replace />} />
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/medicines" element={<Medicines />} />
+                        <Route path='/sales-report' element={<SalesReport />} />
                         <Route path="/orders" element={<Orders />} />
                         <Route path="/profile" element={<Profile />} />
                       </Routes>

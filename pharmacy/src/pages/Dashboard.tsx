@@ -228,7 +228,7 @@ const Dashboard: React.FC = () => {
         </div>
         <div className="card-body">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button className="btn-primary" onClick={() => navigate('/medicines/add')}>
+            <button className="btn-primary" onClick={() => navigate('/medicines')}>
               <PlusCircle className="h-4 w-4 mr-2" />
               Add Medicine
             </button>

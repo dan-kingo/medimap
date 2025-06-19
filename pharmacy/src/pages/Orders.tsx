@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
-import { Search, Eye, Check, X, Clock, MapPin, Phone, User } from 'lucide-react'
+import { Search, Eye, Check, X, Clock, MapPin, Phone, User, Truck } from 'lucide-react'
 import { useApi, useApiMutation } from '../hooks/useApi'
-import { orderAPI } from '../services/api'
 
 interface OrderItem {
   medicine: {
@@ -24,7 +23,7 @@ interface Order {
   items: OrderItem[]
   deliveryType: 'delivery' | 'pickup'
   address?: string
-  status: 'Placed' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled'
+  status: 'Placed' | 'Accepted' | 'Out for Delivery' | 'Delivered' | 'Cancelled'
   createdAt: string
   prescriptionUrl?: string
   paymentMethod: string
@@ -44,8 +43,8 @@ const Orders: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'placed': return 'badge-warning'
-      case 'processing': return 'badge-primary'
-      case 'shipped': return 'badge-primary'
+      case 'accepted': return 'badge-primary'
+      case 'out for delivery': return 'badge-info'
       case 'delivered': return 'badge-success'
       case 'cancelled': return 'badge-error'
       default: return 'badge-gray'
@@ -55,8 +54,8 @@ const Orders: React.FC = () => {
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
       case 'placed': return Clock
-      case 'processing': return Eye
-      case 'shipped': return Eye
+      case 'accepted': return Eye
+      case 'out for delivery': return Truck
       case 'delivered': return Check
       case 'cancelled': return X
       default: return Clock
@@ -142,8 +141,8 @@ const Orders: React.FC = () => {
             >
               <option value="">All Status</option>
               <option value="placed">Placed</option>
-              <option value="processing">Processing</option>
-              <option value="shipped">Shipped</option>
+              <option value="accepted">Accepted</option>
+              <option value="out for delivery">Out for Delivery</option>
               <option value="delivered">Delivered</option>
               <option value="cancelled">Cancelled</option>
             </select>
@@ -243,7 +242,7 @@ const Orders: React.FC = () => {
                     {order.status === 'Placed' && (
                       <>
                         <button
-                          onClick={() => handleStatusUpdate(order._id, 'Processing')}
+                          onClick={() => handleStatusUpdate(order._id, 'Accepted')}
                           className="btn-success"
                           disabled={updateLoading}
                         >
@@ -261,18 +260,18 @@ const Orders: React.FC = () => {
                       </>
                     )}
                     
-                    {order.status === 'Processing' && (
+                    {order.status === 'Accepted' && (
                       <button
-                        onClick={() => handleStatusUpdate(order._id, 'Shipped')}
+                        onClick={() => handleStatusUpdate(order._id, 'Out for Delivery')}
                         className="btn-primary"
                         disabled={updateLoading}
                       >
-                        <Check className="h-4 w-4 mr-2" />
-                        Mark as Shipped
+                        <Truck className="h-4 w-4 mr-2" />
+                        Mark as Out for Delivery
                       </button>
                     )}
 
-                    {order.status === 'Shipped' && (
+                    {order.status === 'Out for Delivery' && (
                       <button
                         onClick={() => handleStatusUpdate(order._id, 'Delivered')}
                         className="btn-success"
