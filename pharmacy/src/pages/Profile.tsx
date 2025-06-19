@@ -1,46 +1,117 @@
-import React, { useState } from 'react'
-import { Save, MapPin, Phone, Mail, Building, FileText } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Save, MapPin, Phone, Mail, Building, FileText, AlertCircle } from 'lucide-react'
+import { useApiMutation } from '../hooks/useApi'
+import { profileAPI } from '../services/api'
 
 const Profile: React.FC = () => {
   const [formData, setFormData] = useState({
-    name: 'MediCare Pharmacy',
-    ownerName: 'Dr. John Smith',
-    licenseNumber: 'PH-2024-001',
-    phone: '+1234567890',
-    email: 'info@medicare-pharmacy.com',
-    address: '123 Main Street',
-    city: 'New York',
-    woreda: 'Manhattan',
-    deliveryAvailable: true,
+    name: '',
+    ownerName: '',
+    licenseNumber: '',
+    phone: '',
+    email: '',
+    address: '',
+    city: '',
+    woreda: '',
+    deliveryAvailable: false,
     location: {
-      coordinates: [-74.006, 40.7128] // [longitude, latitude]
+      coordinates: [0, 0] as [number, number]
     }
   })
-  const [loading, setLoading] = useState(false)
+  
   const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState<'success' | 'error'>('success')
+  const { mutate: updateProfile, loading } = useApiMutation()
+
+  useEffect(() => {
+    // Load saved profile data from localStorage or API
+    const savedProfile = localStorage.getItem('pharmacyProfile')
+    if (savedProfile) {
+      try {
+        const parsed = JSON.parse(savedProfile)
+        setFormData(prev => ({ ...prev, ...parsed }))
+      } catch (error) {
+        console.error('Error parsing saved profile:', error)
+      }
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setMessage('')
 
     try {
-      // Implement API call to update profile
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Mock delay
+      const profileData = {
+        ...formData,
+        location: {
+          type: 'Point' as const,
+          coordinates: formData.location.coordinates
+        }
+      }
+
+      await updateProfile('/pharmacy/update-profile', profileData)
+      
+      // Save to localStorage for persistence
+      localStorage.setItem('pharmacyProfile', JSON.stringify(formData))
+      
       setMessage('Profile updated successfully!')
-    } catch (error) {
-      setMessage('Failed to update profile. Please try again.')
-    } finally {
-      setLoading(false)
+      setMessageType('success')
+      
+      // Clear message after 5 seconds
+      setTimeout(() => setMessage(''), 5000)
+    } catch (error: any) {
+      setMessage(error.message || 'Failed to update profile. Please try again.')
+      setMessageType('error')
     }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }))
+    
+    if (name === 'longitude' || name === 'latitude') {
+      const coord = parseFloat(value) || 0
+      const index = name === 'longitude' ? 0 : 1
+      setFormData(prev => ({
+        ...prev,
+        location: {
+          coordinates: [
+            index === 0 ? coord : prev.location.coordinates[0],
+            index === 1 ? coord : prev.location.coordinates[1]
+          ] as [number, number]
+        }
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      }))
+    }
+  }
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setFormData(prev => ({
+            ...prev,
+            location: {
+              coordinates: [position.coords.longitude, position.coords.latitude]
+            }
+          }))
+          setMessage('Location updated successfully!')
+          setMessageType('success')
+          setTimeout(() => setMessage(''), 3000)
+        },
+        (error) => {
+          setMessage('Unable to get your location. Please enter coordinates manually.')
+          setMessageType('error')
+          setTimeout(() => setMessage(''), 5000)
+        }
+      )
+    } else {
+      setMessage('Geolocation is not supported by this browser.')
+      setMessageType('error')
+    }
   }
 
   return (
@@ -51,11 +122,12 @@ const Profile: React.FC = () => {
       </div>
 
       {message && (
-        <div className={`p-4 rounded-lg ${
-          message.includes('successfully') 
+        <div className={`p-4 rounded-lg flex items-center ${
+          messageType === 'success' 
             ? 'bg-success-50 text-success-700 border border-success-200' 
             : 'bg-error-50 text-error-700 border border-error-200'
         }`}>
+          {messageType === 'error' && <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />}
           {message}
         </div>
       )}
@@ -83,6 +155,7 @@ const Profile: React.FC = () => {
                   className="input"
                   value={formData.name}
                   onChange={handleChange}
+                  placeholder="Enter pharmacy name"
                 />
               </div>
 
@@ -98,6 +171,7 @@ const Profile: React.FC = () => {
                   className="input"
                   value={formData.ownerName}
                   onChange={handleChange}
+                  placeholder="Enter owner name"
                 />
               </div>
 
@@ -115,6 +189,7 @@ const Profile: React.FC = () => {
                     className="input pl-10"
                     value={formData.licenseNumber}
                     onChange={handleChange}
+                    placeholder="Enter license number"
                   />
                 </div>
               </div>
@@ -133,6 +208,7 @@ const Profile: React.FC = () => {
                     className="input pl-10"
                     value={formData.phone}
                     onChange={handleChange}
+                    placeholder="Enter phone number"
                   />
                 </div>
               </div>
@@ -151,6 +227,7 @@ const Profile: React.FC = () => {
                     className="input pl-10"
                     value={formData.email}
                     onChange={handleChange}
+                    placeholder="Enter email address"
                   />
                 </div>
               </div>
@@ -179,6 +256,7 @@ const Profile: React.FC = () => {
                   className="input"
                   value={formData.address}
                   onChange={handleChange}
+                  placeholder="Enter street address"
                 />
               </div>
 
@@ -194,6 +272,7 @@ const Profile: React.FC = () => {
                   className="input"
                   value={formData.city}
                   onChange={handleChange}
+                  placeholder="Enter city"
                 />
               </div>
 
@@ -209,7 +288,54 @@ const Profile: React.FC = () => {
                   className="input"
                   value={formData.woreda}
                   onChange={handleChange}
+                  placeholder="Enter woreda"
                 />
+              </div>
+
+              <div>
+                <label htmlFor="longitude" className="block text-sm font-medium text-gray-700 mb-2">
+                  Longitude (GPS)
+                </label>
+                <input
+                  type="number"
+                  id="longitude"
+                  name="longitude"
+                  step="any"
+                  className="input"
+                  value={formData.location.coordinates[0]}
+                  onChange={handleChange}
+                  placeholder="Enter longitude"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 mb-2">
+                  Latitude (GPS)
+                </label>
+                <input
+                  type="number"
+                  id="latitude"
+                  name="latitude"
+                  step="any"
+                  className="input"
+                  value={formData.location.coordinates[1]}
+                  onChange={handleChange}
+                  placeholder="Enter latitude"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <button
+                  type="button"
+                  onClick={getCurrentLocation}
+                  className="btn-secondary"
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Get Current Location
+                </button>
+                <p className="text-sm text-gray-500 mt-2">
+                  Click to automatically fill in your current GPS coordinates
+                </p>
               </div>
             </div>
           </div>
