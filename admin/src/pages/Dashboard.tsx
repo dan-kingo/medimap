@@ -56,13 +56,7 @@ const Dashboard: React.FC = () => {
       color: 'text-purple-600',
       bgColor: 'bg-purple-100',
     },
-    {
-      name: 'Medicine Types',
-      value: analytics?.mostRequestedMedicines?.length || 0,
-      icon: Pill,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100',
-    },
+    
   ]
 
   if (loading) {
@@ -81,7 +75,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {stats.map((stat) => {
           const Icon = stat.icon
           return (
