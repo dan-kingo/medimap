@@ -4,9 +4,10 @@ import { adminLogin, approvePharmacy, createMedicine, deleteMedicine, exportAnal
 import { verifyAdmin } from '../middlewares/adminMiddleware';
 
 const router = express.Router();
+router.post('/login', adminLogin);
+
 router.use(verifyAdmin);
 
-router.post('/login', adminLogin);
 router.get('/manage/users', getAllUsers);
 router.get('/manage/analytics', getBasicAnalytics);
 router.get('/manage/pharmacies/pending', getPendingPharmacies);
