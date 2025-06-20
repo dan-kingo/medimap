@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import User from '../models/user.js'
+import Pharmacy from '../models/pharmacy.js';
 
 export const getProfile = async (req: Request, res: Response) => {
   if (!req.user) {
@@ -11,12 +12,18 @@ export const getProfile = async (req: Request, res: Response) => {
 
   try {
     const user = await User.findById(req.user.userId).select('-password -otp -otpExpiresAt');
-    console.log(user)
+    
     if (!user) 
         { res.status(404).json({ message: 'User not found' });
     return }
 
-    res.status(200).json({ user });
+    // If user is a pharmacy, also fetch pharmacy data
+    let pharmacy = null;
+    if (user.role === 'pharmacy') {
+      pharmacy = await Pharmacy.findOne({ user: user._id });
+    }
+
+    res.status(200).json({ user, pharmacy });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }

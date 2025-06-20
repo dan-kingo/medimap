@@ -77,12 +77,16 @@ export const useAuthStore = create<AuthState>()(
         })
       },
       
-      logout: () => set({ 
-        user: null, 
-        pharmacy: null, 
-        token: null, 
-        isProfileComplete: false 
-      }),
+      logout: () => {
+        set({ 
+          user: null, 
+          pharmacy: null, 
+          token: null, 
+          isProfileComplete: false 
+        })
+        // Redirect to login after logout
+        window.location.href = '/login'
+      },
       
       updatePharmacy: (updates) => {
         const currentPharmacy = get().pharmacy

@@ -27,13 +27,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/profile" replace />
   }
 
-  // Check if pharmacy is approved
-  if (isProfileComplete && pharmacy && !pharmacy.isActive && location.pathname !== '/pending-approval') {
+  // Check if pharmacy is approved - only redirect to pending approval if profile is complete but not approved
+  if (isProfileComplete && pharmacy && pharmacy.status !== 'approved' && location.pathname !== '/pending-approval') {
     return <Navigate to="/pending-approval" replace />
   }
 
   // If trying to access profile when already complete and approved, redirect to dashboard
-  if (isProfileComplete && pharmacy?.isActive && location.pathname === '/profile' && location.search !== '?edit=true') {
+  if (isProfileComplete && pharmacy?.status === 'approved' && pharmacy?.isActive && location.pathname === '/profile' && location.search !== '?edit=true') {
     return <Navigate to="/dashboard" replace />
   }
 

@@ -61,38 +61,31 @@ export const loginPharmacy = async (req: Request, res: Response) => {
       res.status(404).json({ error: "Pharmacy not found" });
       return;
     }
-    if (!pharmacy.isActive ) {
-      res.status(403).json({ message: "Account not yet approved" });
-      return;
-    }
 
     const user = await User.findOne({ email, role: "pharmacy" });
     if (!user) {
       res.status(404).json({ error: "Pharmacy not found" });
-
       return;
     }
 
     const isMatch = await bcrypt.compare(password, user.password!);
     if (!isMatch) {
       res.status(400).json({ error: "Invalid credentials" });
-
       return;
     }
 
     const token = generateToken(user._id.toString(), user.role);
 
-    res
-      .status(200)
-      .json({
-        token,
-        user: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        },
-      });
+    res.status(200).json({
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+      pharmacy: pharmacy,
+    });
   } catch (error) {
     res.status(500).json({ error: "Login failed" });
   }
