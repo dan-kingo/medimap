@@ -55,6 +55,7 @@ export const adminAPI = {
   getUsers: () => api.get('/admin/manage/users'),
   
   // Pharmacies
+  getAllPharmacies: () => api.get('/admin/manage/pharmacies'),
   getPendingPharmacies: () => api.get('/admin/manage/pharmacies/pending'),
   approvePharmacy: (id: string) => api.put(`/admin/manage/pharmacies/${id}/approve`),
   rejectPharmacy: (id: string) => api.put(`/admin/manage/pharmacies/${id}/reject`),

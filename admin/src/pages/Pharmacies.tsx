@@ -28,7 +28,7 @@ const Pharmacies: React.FC = () => {
   useEffect(() => {
     const fetchPharmacies = async () => {
       try {
-        const response = await adminAPI.getPendingPharmacies()
+        const response = await adminAPI.getAllPharmacies()
         setPharmacies(response.data)
       } catch (error) {
         console.error('Error fetching pharmacies:', error)
@@ -192,8 +192,27 @@ const Pharmacies: React.FC = () => {
                 <span>Applied: {new Date(pharmacy.createdAt).toLocaleDateString()}</span>
               </div>
 
-              {pharmacy.status === 'pending' && (
-                <div className="flex space-x-2">
+              <div className="flex space-x-2">
+                {pharmacy.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={() => handleApprove(pharmacy._id)}
+                      className="btn-success flex-1"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => handleReject(pharmacy._id)}
+                      className="btn-error flex-1"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Reject
+                    </button>
+                  </>
+                )}
+                
+                {pharmacy.status === 'rejected' && (
                   <button
                     onClick={() => handleApprove(pharmacy._id)}
                     className="btn-success flex-1"
@@ -201,23 +220,16 @@ const Pharmacies: React.FC = () => {
                     <Check className="h-4 w-4 mr-2" />
                     Approve
                   </button>
-                  <button
-                    onClick={() => handleReject(pharmacy._id)}
-                    className="btn-error flex-1"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Reject
-                  </button>
-                </div>
-              )}
+                )}
 
-              {pharmacy.status === 'approved' && (
-                <div className="text-center">
-                  <span className={`text-sm ${pharmacy.isActive ? 'text-green-600' : 'text-gray-500'}`}>
-                    {pharmacy.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              )}
+                {pharmacy.status === 'approved' && (
+                  <div className="text-center w-full">
+                    <span className={`text-sm ${pharmacy.isActive ? 'text-green-600' : 'text-gray-500'}`}>
+                      {pharmacy.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ))}

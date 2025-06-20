@@ -47,6 +47,10 @@ export const getAllUsers = async (_req: Request, res: Response) => {
   res.json(users);
 };
 
+export const getAllPharmacies = async (_req: Request, res: Response) => {
+  const pharmacies = await Pharmacy.find();
+  res.json(pharmacies);
+}
 // 2. Get pending pharmacy applications
 export const getPendingPharmacies = async (_req: Request, res: Response) => {
   const pending = await Pharmacy.find({ status: 'pending' });
