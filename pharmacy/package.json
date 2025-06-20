@@ -24,6 +24,15 @@
     "zustand": "^4.5.7"
   },
   "devDependencies": {
+    "@types/babel__core": "^7.20.5",
+    "@types/babel__generator": "^7.27.0",
+    "@types/babel__template": "^7.4.4",
+    "@types/babel__traverse": "^7.20.7",
+    "@types/connect": "^3.4.38",
+    "@types/estree": "^1.0.8",
+    "@types/json-schema": "^7.0.15",
+    "@types/mime": "^3.0.4",
+    "@types/node": "^24.0.3",
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "@typescript-eslint/eslint-plugin": "^6.10.0",

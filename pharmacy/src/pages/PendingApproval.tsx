@@ -25,7 +25,7 @@ const PendingApproval: React.FC = () => {
         } else if (updatedPharmacy.status === 'rejected') {
           toast.error('Your pharmacy application has been rejected. Please contact support.')
         } else {
-          toast.info('Your application is still under review. Please check back later.')
+          toast('Your application is still under review. Please check back later.')
         }
       }
     } catch (error) {
