@@ -1,20 +1,20 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { authAPI } from '../services/api'
-
-interface User {
-  _id: string
-  name: string
-  email: string
-  role: string
-}
+import React, { createContext, useContext, useEffect, ReactNode } from 'react'
+import { useAuthStore } from '../stores/authStore'
+import { authAPI, profileAPI } from '../services/api'
+import toast from 'react-hot-toast'
 
 interface AuthContextType {
-  user: User | null
+  user: any
+  pharmacy: any
   token: string | null
+  loading: boolean
+  isProfileComplete: boolean
   login: (email: string, password: string) => Promise<void>
   register: (data: RegisterData) => Promise<void>
   logout: () => void
-  loading: boolean
+  forgotPassword: (phone: string) => Promise<void>
+  resetPassword: (phone: string, otp: string, newPassword: string) => Promise<void>
+  updateProfile: (data: any) => Promise<void>
 }
 
 interface RegisterData {
@@ -39,73 +39,143 @@ interface AuthProviderProps {
 }
 
 const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'))
-  const [loading, setLoading] = useState(true)
+  const {
+    user,
+    pharmacy,
+    token,
+    loading,
+    isProfileComplete,
+    setUser,
+    setPharmacy,
+    setToken,
+    setLoading,
+    login: storeLogin,
+    logout: storeLogout,
+    updatePharmacy
+  } = useAuthStore()
 
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('token')
-      const storedUser = localStorage.getItem('user')
-      
-      if (storedToken && storedUser) {
+      if (token && user) {
         try {
-          setToken(storedToken)
-          setUser(JSON.parse(storedUser))
+          // Fetch latest pharmacy data
+          const response = await profileAPI.getProfile()
+          if (response.data.pharmacy) {
+            setPharmacy(response.data.pharmacy)
+          }
         } catch (error) {
-          console.error('Error parsing stored user:', error)
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
+          console.error('Error fetching pharmacy data:', error)
         }
       }
       setLoading(false)
     }
 
     initAuth()
-  }, [])
+  }, [token, user, setPharmacy, setLoading])
 
   const login = async (email: string, password: string) => {
     try {
+      setLoading(true)
       const response = await authAPI.login(email, password)
       const { token: newToken, user: userData } = response.data
       
-      setToken(newToken)
-      setUser(userData)
-      localStorage.setItem('token', newToken)
-      localStorage.setItem('user', JSON.stringify(userData))
-    } catch (error) {
+      // Fetch pharmacy data
+      let pharmacyData = null
+      try {
+        const profileResponse = await profileAPI.getProfile()
+        pharmacyData = profileResponse.data.pharmacy
+      } catch (error) {
+        console.error('Error fetching pharmacy profile:', error)
+      }
+      
+      storeLogin(newToken, userData, pharmacyData)
+      toast.success('Login successful!')
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Login failed'
+      toast.error(message)
       throw error
+    } finally {
+      setLoading(false)
     }
   }
 
   const register = async (data: RegisterData) => {
     try {
+      setLoading(true)
       const response = await authAPI.register(data)
-      const { token: newToken, user: userData } = response.data
+      const { token: newToken, user: userData, pharmacy: pharmacyData } = response.data
       
-      setToken(newToken)
-      setUser(userData)
-      localStorage.setItem('token', newToken)
-      localStorage.setItem('user', JSON.stringify(userData))
-    } catch (error) {
+      storeLogin(newToken, userData, pharmacyData)
+      toast.success('Registration successful!')
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Registration failed'
+      toast.error(message)
       throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const forgotPassword = async (phone: string) => {
+    try {
+      setLoading(true)
+      await authAPI.forgotPassword(phone)
+      toast.success('OTP sent to your phone')
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Failed to send OTP'
+      toast.error(message)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const resetPassword = async (phone: string, otp: string, newPassword: string) => {
+    try {
+      setLoading(true)
+      await authAPI.resetPassword(phone, otp, newPassword)
+      toast.success('Password reset successful!')
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Password reset failed'
+      toast.error(message)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateProfile = async (data: any) => {
+    try {
+      setLoading(true)
+      const response = await profileAPI.updateProfile(data)
+      updatePharmacy(response.data.pharmacy)
+      toast.success('Profile updated successfully!')
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Profile update failed'
+      toast.error(message)
+      throw error
+    } finally {
+      setLoading(false)
     }
   }
 
   const logout = () => {
-    setUser(null)
-    setToken(null)
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    storeLogout()
+    toast.success('Logged out successfully')
   }
 
   const value = {
     user,
+    pharmacy,
     token,
+    loading,
+    isProfileComplete,
     login,
     register,
     logout,
-    loading,
+    forgotPassword,
+    resetPassword,
+    updateProfile,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

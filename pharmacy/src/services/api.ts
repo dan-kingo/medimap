@@ -13,9 +13,16 @@ const api = axios.create({
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('auth-storage')
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      try {
+        const parsed = JSON.parse(token)
+        if (parsed.state?.token) {
+          config.headers.Authorization = `Bearer ${parsed.state.token}`
+        }
+      } catch (error) {
+        console.error('Error parsing token:', error)
+      }
     }
     return config
   },
@@ -29,7 +36,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token')
+      localStorage.removeItem('auth-storage')
       window.location.href = '/login'
     }
     return Promise.reject(error)
@@ -47,10 +54,18 @@ export const authAPI = {
     password: string
     phone: string
   }) => api.post('/pharmacy/auth/register', data),
+
+  forgotPassword: (phone: string) =>
+    api.post('/forgot-password/request-otp', { phone }),
+
+  resetPassword: (phone: string, otp: string, newPassword: string) =>
+    api.post('/forgot-password/verify-otp', { phone, otp, newPassword }),
 }
 
 // Profile API
 export const profileAPI = {
+  getProfile: () => api.get('/profile'),
+  
   updateProfile: (data: {
     name: string
     ownerName: string

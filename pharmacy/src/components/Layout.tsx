@@ -1,6 +1,7 @@
 import React, { ReactNode, useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuthStore } from '../stores/authStore'
+import { useNotificationStore } from '../stores/notificationStore'
 import { notificationAPI } from '../services/api'
 import { 
   LayoutDashboard, 
@@ -11,28 +12,27 @@ import {
   Menu,
   X,
   Bell,
-  Check
+  Check,
+  TrendingUp
 } from 'lucide-react'
 
 interface LayoutProps {
   children: ReactNode
 }
 
-interface Notification {
-  id: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
-  type?: string;
-  // Add other relevant fields based on your API
-}
-
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { logout, user } = useAuth()
+  const { logout, user, pharmacy } = useAuthStore()
+  const { 
+    notifications, 
+    unreadCount, 
+    setNotifications, 
+    setUnreadCount, 
+    markAsRead, 
+    markAllAsRead 
+  } = useNotificationStore()
+  
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [notifications, setNotifications] = useState<Notification[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
   const notificationsRef = useRef<HTMLDivElement>(null)
 
@@ -40,10 +40,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Medicines', href: '/medicines', icon: Pill },
     { name: 'Orders', href: '/orders', icon: ShoppingCart },
-    { name: 'Profile', href: '/profile', icon: User },
+    { name: 'Sales Report', href: '/sales-report', icon: TrendingUp },
+    { name: 'Profile', href: '/profile?edit=true', icon: User },
   ]
 
-  const isActive = (path: string) => location.pathname === path
+  const isActive = (path: string) => {
+    if (path === '/profile?edit=true') {
+      return location.pathname === '/profile' && location.search === '?edit=true'
+    }
+    return location.pathname === path
+  }
 
   const fetchUnreadCount = async () => {
     try {
@@ -58,30 +64,24 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     try {
       const response = await notificationAPI.getNotifications()
       setNotifications(response.data)
-      // Update unread count based on the fetched notifications
-      setUnreadCount(response.data.filter((n: Notification) => !n.read).length)
     } catch (error) {
       console.error('Error fetching notifications:', error)
     }
   }
 
-  const markAsRead = async (notificationId: string) => {
+  const handleMarkAsRead = async (notificationId: string) => {
     try {
       await notificationAPI.markAsRead(notificationId)
-      setNotifications(notifications.map(n => 
-        n.id === notificationId ? {...n, read: true} : n
-      ))
-      setUnreadCount(prev => prev - 1)
+      markAsRead(notificationId)
     } catch (error) {
       console.error('Error marking notification as read:', error)
     }
   }
 
-  const markAllAsRead = async () => {
+  const handleMarkAllAsRead = async () => {
     try {
       await notificationAPI.markAllAsRead()
-      setNotifications(notifications.map(n => ({...n, read: true})))
-      setUnreadCount(0)
+      markAllAsRead()
     } catch (error) {
       console.error('Error marking all notifications as read:', error)
     }
@@ -177,8 +177,19 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
             <div className="space-y-1">
               <div className="px-3 py-2 text-sm text-gray-600">
-                <div className="font-medium">{user?.name}</div>
-                <div className="text-xs text-gray-500">{user?.email}</div>
+                <div className="font-medium">{pharmacy?.name || user?.name}</div>
+                <div className="text-xs text-gray-500">{pharmacy?.email || user?.email}</div>
+                {pharmacy?.status && (
+                  <div className="text-xs mt-1">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      pharmacy.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      pharmacy.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {pharmacy.status}
+                    </span>
+                  </div>
+                )}
               </div>
               <button
                 onClick={logout}
@@ -236,7 +247,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         <button 
                           onClick={(e) => {
                             e.stopPropagation()
-                            markAllAsRead()
+                            handleMarkAllAsRead()
                           }}
                           className="text-xs text-primary-600 hover:text-primary-800 flex items-center"
                         >
@@ -251,12 +262,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           {notifications.map((notification) => (
                             <div 
                               key={notification.id}
-                              onClick={() => markAsRead(notification.id)}
-                              className={`px-4 py-3 text-sm cursor-pointer ${!notification.read ? 'bg-blue-50' : 'bg-white'} hover:bg-gray-50`}
+                              onClick={() => handleMarkAsRead(notification.id)}
+                              className={`px-4 py-3 text-sm cursor-pointer ${!notification.isRead ? 'bg-blue-50' : 'bg-white'} hover:bg-gray-50`}
                             >
                               <div className="flex justify-between">
                                 <p className="text-gray-700">{notification.message}</p>
-                                {!notification.read && (
+                                {!notification.isRead && (
                                   <span className="h-2 w-2 rounded-full bg-primary-500 mt-1.5"></span>
                                 )}
                               </div>

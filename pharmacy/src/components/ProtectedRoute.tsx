@@ -1,13 +1,14 @@
 import React, { ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { Navigate, useLocation } from 'react-router-dom'
+import { useAuthStore } from '../stores/authStore'
 
 interface ProtectedRouteProps {
   children: ReactNode
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { token, loading } = useAuth()
+  const { token, loading, pharmacy, isProfileComplete } = useAuthStore()
+  const location = useLocation()
 
   if (loading) {
     return (
@@ -19,6 +20,21 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
   if (!token) {
     return <Navigate to="/login" replace />
+  }
+
+  // Check if pharmacy profile is complete
+  if (!isProfileComplete && location.pathname !== '/profile') {
+    return <Navigate to="/profile" replace />
+  }
+
+  // Check if pharmacy is approved
+  if (isProfileComplete && pharmacy && !pharmacy.isActive && location.pathname !== '/pending-approval') {
+    return <Navigate to="/pending-approval" replace />
+  }
+
+  // If trying to access profile when already complete and approved, redirect to dashboard
+  if (isProfileComplete && pharmacy?.isActive && location.pathname === '/profile' && location.search !== '?edit=true') {
+    return <Navigate to="/dashboard" replace />
   }
 
   return <>{children}</>

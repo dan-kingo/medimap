@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import { Save, MapPin, Phone, Mail, Building, FileText, AlertCircle } from 'lucide-react'
-import { useApiMutation } from '../hooks/useApi'
-import { profileAPI } from '../services/api'
+import { Save, MapPin, Phone, Mail, Building, FileText, AlertCircle, ArrowLeft } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { useAuthStore } from '../stores/authStore'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 const Profile: React.FC = () => {
+  const { updateProfile, loading } = useAuth()
+  const { pharmacy, isProfileComplete } = useAuthStore()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isEditing = searchParams.get('edit') === 'true'
+  
   const [formData, setFormData] = useState({
     name: '',
     ownerName: '',
@@ -21,20 +28,25 @@ const Profile: React.FC = () => {
   
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState<'success' | 'error'>('success')
-  const { loading } = useApiMutation()
 
   useEffect(() => {
-    // Load saved profile data from localStorage or API
-    const savedProfile = localStorage.getItem('pharmacyProfile')
-    if (savedProfile) {
-      try {
-        const parsed = JSON.parse(savedProfile)
-        setFormData(prev => ({ ...prev, ...parsed }))
-      } catch (error) {
-        console.error('Error parsing saved profile:', error)
-      }
+    if (pharmacy) {
+      setFormData({
+        name: pharmacy.name || '',
+        ownerName: pharmacy.ownerName || '',
+        licenseNumber: pharmacy.licenseNumber || '',
+        phone: pharmacy.phone || '',
+        email: pharmacy.email || '',
+        address: pharmacy.address || '',
+        city: pharmacy.city || '',
+        woreda: pharmacy.woreda || '',
+        deliveryAvailable: pharmacy.deliveryAvailable || false,
+        location: {
+          coordinates: pharmacy.location?.coordinates || [0, 0]
+        }
+      })
     }
-  }, [])
+  }, [pharmacy])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,13 +61,21 @@ const Profile: React.FC = () => {
         }
       }
 
-      profileAPI.updateProfile(profileData)
-      
-      // Save to localStorage for persistence
-      localStorage.setItem('pharmacyProfile', JSON.stringify(formData))
+      await updateProfile(profileData)
       
       setMessage('Profile updated successfully!')
       setMessageType('success')
+      
+      // If this was the first time setup, redirect to pending approval or dashboard
+      if (!isProfileComplete) {
+        setTimeout(() => {
+          navigate('/pending-approval')
+        }, 2000)
+      } else if (isEditing) {
+        setTimeout(() => {
+          navigate('/dashboard')
+        }, 2000)
+      }
       
       // Clear message after 5 seconds
       setTimeout(() => setMessage(''), 5000)
@@ -114,12 +134,45 @@ const Profile: React.FC = () => {
     }
   }
 
+  const pageTitle = !isProfileComplete 
+    ? 'Complete Your Pharmacy Profile' 
+    : isEditing 
+      ? 'Edit Pharmacy Profile' 
+      : 'Pharmacy Profile'
+
+  const pageDescription = !isProfileComplete 
+    ? 'Please complete your pharmacy information to continue' 
+    : isEditing 
+      ? 'Update your pharmacy information and settings' 
+      : 'Manage your pharmacy information and settings'
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Pharmacy Profile</h1>
-        <p className="text-gray-600">Manage your pharmacy information and settings</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">{pageTitle}</h1>
+          <p className="text-gray-600">{pageDescription}</p>
+        </div>
+        {isEditing && isProfileComplete && (
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="btn-secondary flex items-center"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </button>
+        )}
       </div>
+
+      {!isProfileComplete && (
+        <div className="bg-warning-50 border border-warning-200 text-warning-700 px-4 py-3 rounded-lg flex items-start">
+          <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Profile Incomplete</p>
+            <p className="text-sm">Please complete all required fields to access your dashboard.</p>
+          </div>
+        </div>
+      )}
 
       {message && (
         <div className={`p-4 rounded-lg flex items-center ${
@@ -381,7 +434,7 @@ const Profile: React.FC = () => {
             ) : (
               <>
                 <Save className="h-4 w-4 mr-2" />
-                Save Changes
+                {!isProfileComplete ? 'Complete Profile' : 'Save Changes'}
               </>
             )}
           </button>
