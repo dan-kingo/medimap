@@ -5,16 +5,19 @@
   "private": true,
   "workspaces": [
     "backend",
-    "pharmacy"
+    "pharmacy",
+    "admin"
   ],
   "scripts": {
     "dev:backend": "cd backend && npm run dev",
     "dev:pharmacy": "cd pharmacy && npm run dev",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:pharmacy\"",
+    "dev:admin": "cd admin && npm run dev",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:pharmacy\" \"npm run dev:admin\"",
     "build:backend": "cd backend && npm run build",
     "build:pharmacy": "cd pharmacy && npm run build",
-    "build": "npm run build:backend && npm run build:pharmacy",
-    "install:all": "npm install && cd backend && npm install && cd ../pharmacy && npm install"
+    "build:admin": "cd admin && npm run build",
+    "build": "npm run build:backend && npm run build:pharmacy && npm run build:admin",
+    "install:all": "npm install && cd backend && npm install && cd ../pharmacy && npm install && cd ../admin && npm install"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
