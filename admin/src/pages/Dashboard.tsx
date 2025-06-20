@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { Users, Building2, ShoppingCart, Pill, TrendingUp, AlertCircle } from 'lucide-react'
+import { Users, Building2, ShoppingCart, Pill, TrendingUp } from 'lucide-react'
 import { adminAPI } from '../services/api'
 import toast from 'react-hot-toast'
+import { useNavigate } from 'react-router-dom'
 
 interface AnalyticsData {
   totalUsers: number
@@ -16,7 +17,7 @@ interface AnalyticsData {
 const Dashboard: React.FC = () => {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
-
+  const navigate = useNavigate()
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
@@ -141,19 +142,19 @@ const Dashboard: React.FC = () => {
           </div>
           <div className="card-body">
             <div className="grid grid-cols-1 gap-4">
-              <button className="btn-primary justify-start">
-                <Users className="h-4 w-4 mr-2" />
+              <button className="btn-primary justify-start" onClick={() => navigate('/users')}>
+                <Users className="h-4 w-4 mr-2"  />
                 Manage Users
               </button>
-              <button className="btn-secondary justify-start">
-                <Building2 className="h-4 w-4 mr-2" />
+              <button className="btn-secondary justify-start" onClick={() => navigate('/pharmacies')}> 
+                <Building2 className="h-4 w-4 mr-2"  />
                 Review Pharmacies
               </button>
-              <button className="btn-secondary justify-start">
+              <button className="btn-secondary justify-start" onClick={() => navigate('/orders')}>
                 <ShoppingCart className="h-4 w-4 mr-2" />
                 View Orders
               </button>
-              <button className="btn-secondary justify-start">
+              <button className="btn-secondary justify-start" onClick={() => navigate('/analytics')}>
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Analytics Report
               </button>
