@@ -1,51 +1,37 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { View, StyleSheet } from 'react-native';
+import { Text, TextInput, Button, HelperText } from 'react-native-paper';
+import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import Toast from 'react-native-toast-message';
 
-import { AuthStackParamList } from '@/navigation/AuthNavigator';
-import CustomTextInput from '@/components/common/CustomTextInput';
-import CustomButton from '@/components/common/CustomButton';
-import Header from '@/components/common/Header';
-import { authAPI } from '@/services/api';
+import { theme } from '@/src/constants/theme';
+import { authAPI } from '@/src/services/api';
+import Header from '@/src/components/common/Header';
 
-type ForgotPasswordScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
-
-interface ForgotPasswordScreenProps {
-  navigation: ForgotPasswordScreenNavigationProp;
-}
-
-const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation }) => {
-  const theme = useTheme();
-  
+export default function ForgotPasswordScreen() {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSendOtp = async () => {
     if (!phone) {
-      Alert.alert('Error', 'Please enter your phone number');
+      setError('Please enter your phone number');
       return;
     }
 
     setLoading(true);
     try {
       await authAPI.forgotPasswordRequestOtp(phone);
-      Alert.alert(
-        'Success',
-        'OTP sent to your phone number',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('SetPassword'),
-          },
-        ]
-      );
+      Toast.show({
+        type: 'success',
+        text1: 'OTP Sent',
+        text2: 'Password reset code sent to your phone',
+      });
+      // Navigate to a password reset screen (you can create this)
+      router.back();
     } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || 'Failed to send OTP'
-      );
+      setError(error.response?.data?.message || 'Failed to send OTP');
     } finally {
       setLoading(false);
     }
@@ -66,25 +52,38 @@ const ForgotPasswordScreen: React.FC<ForgotPasswordScreenProps> = ({ navigation 
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.form}>
-          <CustomTextInput
+          <TextInput
             label="Phone Number"
             value={phone}
-            onChangeText={setPhone}
+            onChangeText={(text) => {
+              setPhone(text);
+              if (error) setError('');
+            }}
             placeholder="Enter your phone number"
             keyboardType="phone-pad"
+            mode="outlined"
+            error={!!error}
+            style={styles.input}
           />
+          <HelperText type="error" visible={!!error}>
+            {error}
+          </HelperText>
 
-          <CustomButton
-            title="Send Reset Code"
+          <Button
+            mode="contained"
             onPress={handleSendOtp}
             loading={loading}
+            disabled={loading}
             style={styles.sendButton}
-          />
+            contentStyle={styles.buttonContent}
+          >
+            Send Reset Code
+          </Button>
         </Animated.View>
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -107,10 +106,16 @@ const styles = StyleSheet.create({
   form: {
     alignItems: 'center',
   },
+  input: {
+    width: '100%',
+    marginBottom: 8,
+  },
   sendButton: {
     marginTop: 24,
     width: '100%',
+    borderRadius: 12,
+  },
+  buttonContent: {
+    paddingVertical: 8,
   },
 });
-
-export default ForgotPasswordScreen;

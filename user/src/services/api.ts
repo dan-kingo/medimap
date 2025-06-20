@@ -1,5 +1,5 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const API_BASE_URL = 'http://localhost:3000/api';
 
@@ -15,7 +15,7 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await AsyncStorage.getItem('auth_token');
+      const token = await SecureStore.getItemAsync('auth_token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
@@ -34,8 +34,8 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      await AsyncStorage.removeItem('auth_token');
-      await AsyncStorage.removeItem('user_data');
+      await SecureStore.deleteItemAsync('auth_token');
+      await SecureStore.deleteItemAsync('user_data');
       // Navigate to login screen
     }
     return Promise.reject(error);

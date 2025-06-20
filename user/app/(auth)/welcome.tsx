@@ -1,24 +1,15 @@
 import React from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { Text, Button } from 'react-native-paper';
+import { router } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { AuthStackParamList } from '@/navigation/AuthNavigator';
-import CustomButton from '@/components/common/CustomButton';
-
-type WelcomeScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Welcome'>;
-
-interface WelcomeScreenProps {
-  navigation: WelcomeScreenNavigationProp;
-}
+import { theme } from '@/src/constants/theme';
 
 const { width, height } = Dimensions.get('window');
 
-const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
-  const theme = useTheme();
-
+export default function WelcomeScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Animated.View 
@@ -26,7 +17,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
         style={styles.header}
       >
         <View style={[styles.iconContainer, { backgroundColor: theme.colors.primaryContainer }]}>
-          <Icon 
+          <MaterialCommunityIcons 
             name="medical-bag" 
             size={80} 
             color={theme.colors.primary} 
@@ -45,19 +36,19 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
         style={styles.features}
       >
         <View style={styles.feature}>
-          <Icon name="map-search" size={32} color={theme.colors.primary} />
+          <MaterialCommunityIcons name="map-search" size={32} color={theme.colors.primary} />
           <Text variant="bodyMedium" style={styles.featureText}>
             Search nearby pharmacies
           </Text>
         </View>
         <View style={styles.feature}>
-          <Icon name="pill" size={32} color={theme.colors.primary} />
+          <MaterialCommunityIcons name="pill" size={32} color={theme.colors.primary} />
           <Text variant="bodyMedium" style={styles.featureText}>
             Find medicines easily
           </Text>
         </View>
         <View style={styles.feature}>
-          <Icon name="truck-delivery" size={32} color={theme.colors.primary} />
+          <MaterialCommunityIcons name="truck-delivery" size={32} color={theme.colors.primary} />
           <Text variant="bodyMedium" style={styles.featureText}>
             Home delivery available
           </Text>
@@ -68,21 +59,26 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
         entering={FadeInDown.delay(600).duration(800)}
         style={styles.buttons}
       >
-        <CustomButton
-          title="Get Started"
-          onPress={() => navigation.navigate('Register')}
+        <Button
+          mode="contained"
+          onPress={() => router.push('/(auth)/register')}
           style={styles.primaryButton}
-        />
-        <CustomButton
-          title="I already have an account"
-          onPress={() => navigation.navigate('Login')}
+          contentStyle={styles.buttonContent}
+        >
+          Get Started
+        </Button>
+        <Button
           mode="outlined"
+          onPress={() => router.push('/(auth)/login')}
           style={styles.secondaryButton}
-        />
+          contentStyle={styles.buttonContent}
+        >
+          I already have an account
+        </Button>
       </Animated.View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -132,10 +128,13 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     marginBottom: 16,
+    borderRadius: 12,
   },
   secondaryButton: {
     marginBottom: 8,
+    borderRadius: 12,
+  },
+  buttonContent: {
+    paddingVertical: 8,
   },
 });
-
-export default WelcomeScreen;

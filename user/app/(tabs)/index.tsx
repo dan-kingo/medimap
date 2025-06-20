@@ -1,26 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, Alert } from 'react-native';
-import { Text, Card, Chip, useTheme, FAB } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { Text, Card, Chip, FAB, Searchbar } from 'react-native-paper';
+import { router } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Geolocation from '@react-native-community/geolocation';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import Toast from 'react-native-toast-message';
 
-import { MainStackParamList } from '@/navigation/MainNavigator';
-import Header from '@/components/common/Header';
-import CustomTextInput from '@/components/common/CustomTextInput';
-import CustomButton from '@/components/common/CustomButton';
-import { medicineAPI, homeAPI } from '@/services/api';
-import { useAuthStore } from '@/store/authStore';
-import { useCartStore } from '@/store/cartStore';
-import { Medicine, Pharmacy } from '@/types';
+import { theme } from '@/src/constants/theme';
+import Header from '@/src/components/common/Header';
+import { medicineAPI, homeAPI } from '@/src/services/api';
+import { useAuthStore } from '@/src/store/authStore';
+import { useCartStore } from '@/src/store/cartStore';
+import { Medicine, Pharmacy } from '@/src/types';
 
-type HomeScreenNavigationProp = StackNavigationProp<MainStackParamList>;
-
-const HomeScreen: React.FC = () => {
-  const theme = useTheme();
-  const navigation = useNavigation<HomeScreenNavigationProp>();
+export default function HomeScreen() {
   const { user } = useAuthStore();
   const { getTotalItems } = useCartStore();
   
@@ -42,23 +36,31 @@ const HomeScreen: React.FC = () => {
     }
   }, [location]);
 
-  const getCurrentLocation = () => {
-    Geolocation.getCurrentPosition(
-      (position) => {
-        setLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Toast.show({
+          type: 'error',
+          text1: 'Permission Denied',
+          text2: 'Location permission is required to find nearby pharmacies',
         });
-      },
-      (error) => {
-        console.log('Location error:', error);
-        Alert.alert(
-          'Location Access',
-          'Unable to get your location. Please enable location services for better experience.'
-        );
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
-    );
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    } catch (error) {
+      console.log('Location error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Location Error',
+        text2: 'Unable to get your location',
+      });
+    }
   };
 
   const fetchPopularMedicines = async () => {
@@ -83,7 +85,10 @@ const HomeScreen: React.FC = () => {
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      navigation.navigate('SearchResults', { query: searchQuery.trim() });
+      router.push({
+        pathname: '/search-results',
+        params: { query: searchQuery.trim() },
+      });
     }
   };
 
@@ -104,12 +109,12 @@ const HomeScreen: React.FC = () => {
         title={`Hello, ${user?.name || 'User'}!`}
         subtitle="Find medicines from nearby pharmacies"
         actions={[
-          <Icon 
+          <MaterialCommunityIcons 
             key="notifications"
             name="bell-outline" 
             size={24} 
             color={theme.colors.onSurface}
-            onPress={() => navigation.navigate('Notifications')}
+            onPress={() => router.push('/notifications')}
           />
         ]}
       />
@@ -123,23 +128,12 @@ const HomeScreen: React.FC = () => {
       >
         {/* Search Section */}
         <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.searchSection}>
-          <CustomTextInput
-            label=""
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+          <Searchbar
             placeholder="Search for medicines..."
-            left={<Icon name="magnify" size={24} color={theme.colors.onSurfaceVariant} />}
-            right={
-              searchQuery ? (
-                <Icon 
-                  name="close" 
-                  size={24} 
-                  color={theme.colors.onSurfaceVariant}
-                  onPress={() => setSearchQuery('')}
-                />
-              ) : undefined
-            }
+            onChangeText={setSearchQuery}
+            value={searchQuery}
             onSubmitEditing={handleSearch}
+            style={styles.searchBar}
           />
         </Animated.View>
 
@@ -149,20 +143,22 @@ const HomeScreen: React.FC = () => {
             Quick Actions
           </Text>
           <View style={styles.actionButtons}>
-            <CustomButton
-              title="Search Medicine"
-              onPress={() => navigation.navigate('SearchTab')}
-              icon="magnify"
-              mode="outlined"
-              style={styles.actionButton}
-            />
-            <CustomButton
-              title="Upload Prescription"
-              onPress={() => navigation.navigate('Cart')}
-              icon="camera"
-              mode="outlined"
-              style={styles.actionButton}
-            />
+            <Card style={styles.actionCard} onPress={() => router.push('/search')}>
+              <Card.Content style={styles.actionContent}>
+                <MaterialCommunityIcons name="magnify" size={32} color={theme.colors.primary} />
+                <Text variant="bodyMedium" style={styles.actionText}>
+                  Search Medicine
+                </Text>
+              </Card.Content>
+            </Card>
+            <Card style={styles.actionCard} onPress={() => router.push('/upload-prescription')}>
+              <Card.Content style={styles.actionContent}>
+                <MaterialCommunityIcons name="camera" size={32} color={theme.colors.primary} />
+                <Text variant="bodyMedium" style={styles.actionText}>
+                  Upload Prescription
+                </Text>
+              </Card.Content>
+            </Card>
           </View>
         </Animated.View>
 
@@ -175,13 +171,13 @@ const HomeScreen: React.FC = () => {
             <Text 
               variant="bodyMedium" 
               style={[styles.seeAll, { color: theme.colors.primary }]}
-              onPress={() => navigation.navigate('SearchTab')}
+              onPress={() => router.push('/search')}
             >
               See All
             </Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {popularMedicines.map((medicine, index) => (
+            {popularMedicines.map((medicine) => (
               <Card key={medicine._id} style={styles.medicineCard}>
                 <Card.Content>
                   <Text variant="titleSmall" numberOfLines={2}>
@@ -240,7 +236,7 @@ const HomeScreen: React.FC = () => {
                   )}
                   {pharmacy.rating && (
                     <View style={styles.rating}>
-                      <Icon name="star" size={16} color={theme.colors.primary} />
+                      <MaterialCommunityIcons name="star" size={16} color={theme.colors.primary} />
                       <Text variant="bodySmall">{pharmacy.rating}</Text>
                     </View>
                   )}
@@ -256,13 +252,13 @@ const HomeScreen: React.FC = () => {
         <FAB
           icon="cart"
           label={cartItemCount.toString()}
-          onPress={() => navigation.navigate('Cart')}
+          onPress={() => router.push('/cart')}
           style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         />
       )}
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -275,6 +271,9 @@ const styles = StyleSheet.create({
   searchSection: {
     marginVertical: 16,
   },
+  searchBar: {
+    borderRadius: 12,
+  },
   quickActions: {
     marginBottom: 24,
   },
@@ -283,9 +282,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: 12,
   },
-  actionButton: {
+  actionCard: {
     flex: 1,
     marginHorizontal: 4,
+    borderRadius: 12,
+  },
+  actionContent: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  actionText: {
+    marginTop: 8,
+    textAlign: 'center',
   },
   section: {
     marginBottom: 24,
@@ -306,6 +314,7 @@ const styles = StyleSheet.create({
     width: 160,
     marginRight: 12,
     marginBottom: 8,
+    borderRadius: 12,
   },
   medicineType: {
     marginTop: 4,
@@ -321,6 +330,7 @@ const styles = StyleSheet.create({
   },
   pharmacyCard: {
     marginBottom: 12,
+    borderRadius: 12,
   },
   pharmacyHeader: {
     flexDirection: 'row',
@@ -351,5 +361,3 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
 });
-
-export default HomeScreen;

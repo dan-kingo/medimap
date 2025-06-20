@@ -1,24 +1,15 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { View, StyleSheet, ScrollView } from 'react-native';
+import { Text, TextInput, Button, HelperText } from 'react-native-paper';
+import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import Toast from 'react-native-toast-message';
 
-import { AuthStackParamList } from '@/navigation/AuthNavigator';
-import CustomTextInput from '@/components/common/CustomTextInput';
-import CustomButton from '@/components/common/CustomButton';
-import Header from '@/components/common/Header';
-import { authAPI } from '@/services/api';
+import { theme } from '@/src/constants/theme';
+import { authAPI } from '@/src/services/api';
+import Header from '@/src/components/common/Header';
 
-type RegisterScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Register'>;
-
-interface RegisterScreenProps {
-  navigation: RegisterScreenNavigationProp;
-}
-
-const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
-  const theme = useTheme();
-  
+export default function RegisterScreen() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -26,12 +17,25 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
     location: '',
   });
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+    
+    if (!formData.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+    
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone number is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleRegister = async () => {
-    if (!formData.name || !formData.phone) {
-      Alert.alert('Error', 'Please fill in required fields');
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
     try {
@@ -42,20 +46,24 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         location: formData.location,
       });
       
-      navigation.navigate('OtpVerification', {
-        phone: formData.phone,
-        isRegistration: true,
-        userData: {
-          name: formData.name,
-          email: formData.email,
-          location: formData.location,
+      router.push({
+        pathname: '/(auth)/otp-verification',
+        params: {
+          phone: formData.phone,
+          isRegistration: 'true',
+          userData: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            location: formData.location,
+          }),
         },
       });
     } catch (error: any) {
-      Alert.alert(
-        'Registration Failed',
-        error.response?.data?.message || 'Failed to send OTP'
-      );
+      Toast.show({
+        type: 'error',
+        text1: 'Registration Failed',
+        text2: error.response?.data?.message || 'Failed to send OTP',
+      });
     } finally {
       setLoading(false);
     }
@@ -63,6 +71,9 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
 
   const updateFormData = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
   };
 
   return (
@@ -80,43 +91,63 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.form}>
-          <CustomTextInput
+          <TextInput
             label="Full Name *"
             value={formData.name}
             onChangeText={(value) => updateFormData('name', value)}
             placeholder="Enter your full name"
+            mode="outlined"
+            error={!!errors.name}
+            style={styles.input}
           />
+          <HelperText type="error" visible={!!errors.name}>
+            {errors.name}
+          </HelperText>
 
-          <CustomTextInput
+          <TextInput
             label="Phone Number *"
             value={formData.phone}
             onChangeText={(value) => updateFormData('phone', value)}
             placeholder="Enter your phone number"
             keyboardType="phone-pad"
+            mode="outlined"
+            error={!!errors.phone}
+            style={styles.input}
           />
+          <HelperText type="error" visible={!!errors.phone}>
+            {errors.phone}
+          </HelperText>
 
-          <CustomTextInput
+          <TextInput
             label="Email (Optional)"
             value={formData.email}
             onChangeText={(value) => updateFormData('email', value)}
             placeholder="Enter your email"
             keyboardType="email-address"
             autoCapitalize="none"
+            mode="outlined"
+            style={styles.input}
           />
 
-          <CustomTextInput
+          <TextInput
             label="Location (Optional)"
             value={formData.location}
             onChangeText={(value) => updateFormData('location', value)}
             placeholder="Enter your city/town"
+            mode="outlined"
+            style={styles.input}
           />
 
-          <CustomButton
-            title="Continue"
+          <Button
+            mode="contained"
             onPress={handleRegister}
             loading={loading}
+            disabled={loading}
             style={styles.continueButton}
-          />
+            contentStyle={styles.buttonContent}
+          >
+            Continue
+          </Button>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(600).duration(600)} style={styles.footer}>
@@ -124,7 +155,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
             Already have an account?{' '}
             <Text 
               style={{ color: theme.colors.primary, fontWeight: '600' }}
-              onPress={() => navigation.navigate('Login')}
+              onPress={() => router.push('/(auth)/login')}
             >
               Sign In
             </Text>
@@ -133,7 +164,7 @@ const RegisterScreen: React.FC<RegisterScreenProps> = ({ navigation }) => {
       </ScrollView>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -154,8 +185,15 @@ const styles = StyleSheet.create({
   form: {
     marginBottom: 32,
   },
+  input: {
+    marginBottom: 8,
+  },
   continueButton: {
     marginTop: 24,
+    borderRadius: 12,
+  },
+  buttonContent: {
+    paddingVertical: 8,
   },
   footer: {
     alignItems: 'center',
@@ -165,5 +203,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
-export default RegisterScreen;

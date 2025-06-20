@@ -1,37 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { View, StyleSheet } from 'react-native';
+import { Text, TextInput, Button, HelperText } from 'react-native-paper';
+import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import Toast from 'react-native-toast-message';
 
-import { AuthStackParamList } from '@/navigation/AuthNavigator';
-import CustomTextInput from '@/components/common/CustomTextInput';
-import CustomButton from '@/components/common/CustomButton';
-import Header from '@/components/common/Header';
-import { authAPI } from '@/services/api';
-import { useAuthStore } from '@/store/authStore';
+import { theme } from '@/src/constants/theme';
+import { authAPI } from '@/src/services/api';
+import { useAuthStore } from '@/src/store/authStore';
+import Header from '@/src/components/common/Header';
 
-type OtpVerificationScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'OtpVerification'>;
-type OtpVerificationScreenRouteProp = RouteProp<AuthStackParamList, 'OtpVerification'>;
-
-interface OtpVerificationScreenProps {
-  navigation: OtpVerificationScreenNavigationProp;
-  route: OtpVerificationScreenRouteProp;
-}
-
-const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({ 
-  navigation, 
-  route 
-}) => {
-  const theme = useTheme();
+export default function OtpVerificationScreen() {
   const { login } = useAuthStore();
-  const { phone, isRegistration, userData } = route.params;
+  const params = useLocalSearchParams();
+  const { phone, isRegistration, isLogin, userData } = params;
   
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [countdown, setCountdown] = useState(60);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -49,20 +37,23 @@ const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({
 
   const handleVerifyOtp = async () => {
     if (!otp || otp.length !== 6) {
-      Alert.alert('Error', 'Please enter a valid 6-digit OTP');
+      setError('Please enter a valid 6-digit OTP');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await authAPI.verifyOtp(phone, otp);
+      const response = await authAPI.verifyOtp(phone as string, otp);
       const { token, user } = response.data;
       login(token, user);
+      Toast.show({
+        type: 'success',
+        text1: 'Verification Successful',
+        text2: 'Welcome to MediMap!',
+      });
+      router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert(
-        'Verification Failed',
-        error.response?.data?.message || 'Invalid OTP'
-      );
+      setError(error.response?.data?.message || 'Invalid OTP');
     } finally {
       setLoading(false);
     }
@@ -71,23 +62,29 @@ const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({
   const handleResendOtp = async () => {
     setResendLoading(true);
     try {
-      if (isRegistration && userData) {
+      if (isRegistration === 'true' && userData) {
+        const parsedUserData = JSON.parse(userData as string);
         await authAPI.requestOtp({
-          phone,
-          name: userData.name,
-          email: userData.email,
-          location: userData.location,
+          phone: phone as string,
+          name: parsedUserData.name,
+          email: parsedUserData.email,
+          location: parsedUserData.location,
         });
       } else {
-        await authAPI.resendOtp(phone);
+        await authAPI.resendOtp(phone as string);
       }
       setCountdown(60);
-      Alert.alert('Success', 'OTP sent successfully');
+      Toast.show({
+        type: 'success',
+        text1: 'OTP Sent',
+        text2: 'A new OTP has been sent to your phone',
+      });
     } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.response?.data?.message || 'Failed to resend OTP'
-      );
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: error.response?.data?.message || 'Failed to resend OTP',
+      });
     } finally {
       setResendLoading(false);
     }
@@ -108,21 +105,34 @@ const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.form}>
-          <CustomTextInput
+          <TextInput
             label="OTP Code"
             value={otp}
-            onChangeText={setOtp}
+            onChangeText={(text) => {
+              setOtp(text);
+              if (error) setError('');
+            }}
             placeholder="Enter 6-digit code"
             keyboardType="numeric"
+            mode="outlined"
+            error={!!error}
             style={styles.otpInput}
+            maxLength={6}
           />
+          <HelperText type="error" visible={!!error}>
+            {error}
+          </HelperText>
 
-          <CustomButton
-            title="Verify"
+          <Button
+            mode="contained"
             onPress={handleVerifyOtp}
             loading={loading}
+            disabled={loading}
             style={styles.verifyButton}
-          />
+            contentStyle={styles.buttonContent}
+          >
+            Verify
+          </Button>
 
           <View style={styles.resendContainer}>
             {countdown > 0 ? (
@@ -130,19 +140,21 @@ const OtpVerificationScreen: React.FC<OtpVerificationScreenProps> = ({
                 Resend code in {countdown}s
               </Text>
             ) : (
-              <CustomButton
-                title="Resend OTP"
+              <Button
+                mode="text"
                 onPress={handleResendOtp}
                 loading={resendLoading}
-                mode="text"
-              />
+                disabled={resendLoading}
+              >
+                Resend OTP
+              </Button>
             )}
           </View>
         </Animated.View>
       </View>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -170,15 +182,18 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 24,
     letterSpacing: 8,
+    marginBottom: 8,
   },
   verifyButton: {
     marginTop: 24,
     width: '100%',
+    borderRadius: 12,
+  },
+  buttonContent: {
+    paddingVertical: 8,
   },
   resendContainer: {
     marginTop: 16,
     alignItems: 'center',
   },
 });
-
-export default OtpVerificationScreen;

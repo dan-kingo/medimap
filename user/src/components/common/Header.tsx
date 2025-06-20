@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Appbar, useTheme } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { Appbar } from 'react-native-paper';
+import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+
+import { theme } from '@/src/constants/theme';
 
 interface HeaderProps {
   title: string;
@@ -11,15 +13,12 @@ interface HeaderProps {
   subtitle?: string;
 }
 
-const Header: React.FC<HeaderProps> = ({
+export default function Header({
   title,
   showBack = false,
   actions = [],
   subtitle,
-}) => {
-  const theme = useTheme();
-  const navigation = useNavigation();
-
+}: HeaderProps) {
   return (
     <Animated.View 
       entering={FadeInDown.duration(300)}
@@ -27,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({
     >
       <Appbar.Header style={styles.header}>
         {showBack && (
-          <Appbar.BackAction onPress={() => navigation.goBack()} />
+          <Appbar.BackAction onPress={() => router.back()} />
         )}
         <Appbar.Content 
           title={title} 
@@ -40,7 +39,7 @@ const Header: React.FC<HeaderProps> = ({
       </Appbar.Header>
     </Animated.View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -61,5 +60,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
-export default Header;
