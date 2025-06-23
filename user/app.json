@@ -66,6 +66,9 @@
     "scheme": "medimap",
     "experiments": {
       "typedRoutes": false
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
