@@ -29,6 +29,13 @@ export default function RegisterScreen() {
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
     }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    }
+    if (!formData.location.trim()) {
+      newErrors.location = 'Location is required';
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -119,7 +126,7 @@ export default function RegisterScreen() {
           </HelperText>
 
           <TextInput
-            label="Email (Optional)"
+            label="Email *"
             value={formData.email}
             onChangeText={(value) => updateFormData('email', value)}
             placeholder="Enter your email"
@@ -130,7 +137,7 @@ export default function RegisterScreen() {
           />
 
           <TextInput
-            label="Location (Optional)"
+            label="Location *"
             value={formData.location}
             onChangeText={(value) => updateFormData('location', value)}
             placeholder="Enter your city/town"

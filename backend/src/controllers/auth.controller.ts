@@ -18,7 +18,14 @@ export const requestOtp = async (req: Request, res: Response) => {
      return
   }
 
+
   try {
+
+        const existingUser = await User.findOne({ phone });
+    if (existingUser) {
+      return res.status(409).json({ message: 'Phone number already registered' });
+    }
+
     await sendOtpToUser({ phone, name, email, location });
     res.status(200).json({ message: 'OTP sent' });
   } catch (err: any) {
