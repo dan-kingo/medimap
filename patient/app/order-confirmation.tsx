@@ -32,7 +32,7 @@ export default function OrderConfirmationScreen() {
     setLoading(true);
 
     try {
-      let location = null;
+      let location: { type: 'Point'; coordinates: [number, number]; } | undefined = undefined;
       if (deliveryType === 'delivery') {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
@@ -57,7 +57,7 @@ export default function OrderConfirmationScreen() {
         items: orderItems,
         deliveryType,
         address: deliveryType === 'delivery' ? address : undefined,
-        location: deliveryType === 'delivery' ? location : undefined,
+        location,
         paymentMethod,
       };
 

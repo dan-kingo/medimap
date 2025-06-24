@@ -2,7 +2,7 @@
 import axios from 'axios';
 import { Order } from '@/src/types/order';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://110.161.141.152:3000/api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.224.216:3000/api';
 
 export const createOrder = async (orderData: FormData) => {
   try {

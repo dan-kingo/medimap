@@ -169,14 +169,7 @@ export default function HomeScreen() {
                 </Text>
               </Card.Content>
             </Card>
-            <Card style={styles.actionCard} onPress={() => router.push('/upload-prescription')}>
-              <Card.Content style={styles.actionContent}>
-                <MaterialCommunityIcons name="camera" size={32} color={theme.colors.primary} />
-                <Text variant="bodyMedium" style={styles.actionText}>
-                  Upload Prescription
-                </Text>
-              </Card.Content>
-            </Card>
+           
           </View>
         </Animated.View>
 
