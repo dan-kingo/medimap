@@ -89,7 +89,15 @@ export default function OrdersScreen() {
   if (orders.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Header title="My Orders" />
+        <Header title="My Orders" actions={[
+                  <MaterialCommunityIcons 
+                    key="notifications"
+                    name="bell-outline" 
+                    size={24} 
+                    color={theme.colors.onSurface}
+                    onPress={() => router.push('/notifications')}
+                  />
+                ]} />
         <View style={styles.emptyState}>
           <MaterialCommunityIcons 
             name="package-variant-closed" 

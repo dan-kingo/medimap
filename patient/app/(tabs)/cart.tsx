@@ -49,7 +49,15 @@ export default function CartScreen() {
   if (items.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Header title="Shopping Cart" />
+        <Header title="Shopping Cart" actions={[
+                  <MaterialCommunityIcons 
+                    key="notifications"
+                    name="bell-outline" 
+                    size={24} 
+                    color={theme.colors.onSurface}
+                    onPress={() => router.push('/notifications')}
+                  />
+                ]}/>
         <View style={styles.emptyState}>
           <MaterialCommunityIcons 
             name="cart-outline" 

@@ -1,3 +1,4 @@
+import Header from '@/src/components/Header';
 import api from '@/src/services/api';
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
@@ -101,9 +102,10 @@ export default function NotificationsScreen() {
   }
 
   return (
+    <>
+    <Header title="Notifications" showBack/>
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>Notifications</Text>
         {unreadCount > 0 && (
           <TouchableOpacity onPress={handleMarkAllAsRead}>
             <Text style={styles.markAllText}>Mark all as read</Text>
@@ -131,6 +133,7 @@ export default function NotificationsScreen() {
         </View>
       )}
     </View>
+    </>
   );
 }
 
@@ -143,6 +146,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 20,
   },
   header: {
     flexDirection: 'row',

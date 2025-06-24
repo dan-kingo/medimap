@@ -119,7 +119,15 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Header title="Profile" />
+      <Header title="Profile" actions={[
+                <MaterialCommunityIcons 
+                  key="notifications"
+                  name="bell-outline" 
+                  size={24} 
+                  color={theme.colors.onSurface}
+                  onPress={() => router.push('/notifications')}
+                />
+              ]}/>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* User Info Card */}

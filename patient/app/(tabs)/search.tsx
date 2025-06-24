@@ -154,7 +154,15 @@ export default function SearchScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Header title="Search Medicines" />
+      <Header title="Search Medicines" actions={[
+                <MaterialCommunityIcons 
+                  key="notifications"
+                  name="bell-outline" 
+                  size={24} 
+                  color={theme.colors.onSurface}
+                  onPress={() => router.push('/notifications')}
+                />
+              ]}/>
 
       <View style={styles.content}>
         {/* Search Bar */}
