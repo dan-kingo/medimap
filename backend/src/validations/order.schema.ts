@@ -14,8 +14,8 @@ export const placeOrderBodySchema = z
     items: z
       .array(
         z.object({
-          medicine: z.string().length(24).regex(/^[0-9a-fA-F]{24}$/),
-          pharmacy: z.string().length(24).regex(/^[0-9a-fA-F]{24}$/),
+          medicineId: z.string().length(24).regex(/^[0-9a-fA-F]{24}$/),
+          pharmacyId: z.string().length(24).regex(/^[0-9a-fA-F]{24}$/),
           quantity: z.number().min(1),
         })
       )
@@ -39,12 +39,11 @@ export const placeOrderBodySchema = z
     }
   });
 
-
 export const orderIdParamSchema = z.object({
   id: z.string().length(24).regex(/^[0-9a-fA-F]{24}$/, 'Invalid order ID'),
 });
 
 export const updateOrderStatusSchema = z.object({
-  status: z.enum(['Placed', 'Processing', 'Shipped', 'Delivered', 'Cancelled']),
+  status: z.enum(['Placed', 'Accepted', 'Out for Delivery', 'Delivered', 'Cancelled']),
+  rejectionReason: z.string().optional(),
 });
-

@@ -33,7 +33,7 @@ export default function CartScreen() {
 
   const handleProceedToCheckout = () => {
     if (safeItems.length === 0) return;
-    router.push('/checkout');
+    router.push('/order-confirmation');
   };
 
   const handleClearCart = () => {
@@ -75,7 +75,7 @@ export default function CartScreen() {
           </Text>
           <Button
             mode="contained"
-            onPress={() => router.push('/search')}
+            onPress={() => router.push('/(tabs)/search')}
             style={styles.shopButton}
           >
             Start Shopping
@@ -189,7 +189,6 @@ export default function CartScreen() {
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {

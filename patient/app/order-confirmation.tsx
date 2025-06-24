@@ -4,15 +4,13 @@ import { Text, Card, Button, Divider, RadioButton, TextInput } from 'react-nativ
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import Toast from 'react-native-toast-message';
 
 import { theme } from '@/src/constants/theme';
 import Header from '@/src/components/Header';
 import { useCartStore } from '@/src/store/cartStore';
-import { createOrder } from '@/src/services/orderService';
+import { orderAPI } from '@/src/services/api';
 import { useAuthStore } from '@/src/store/authStore';
-
-type OrderStatus = 'Placed' | 'Accepted' | 'Out for Delivery' | 'Delivered' | 'Cancelled';
 
 export default function OrderConfirmationScreen() {
   const { items, clearCart, getTotalPrice } = useCartStore();
@@ -22,38 +20,12 @@ export default function OrderConfirmationScreen() {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'COD'>('COD');
-  const [prescriptionImage, setPrescriptionImage] = useState<string | null>(null);
 
   const requiresPrescription = items.some(item => item.medicine.requiresPrescription);
-
-  const pickPrescriptionImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (!permissionResult.granted) {
-      Alert.alert('Permission required', 'We need access to your photos to upload prescriptions');
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.5,
-    });
-
-    if (!result.canceled) {
-      setPrescriptionImage(result.assets[0].uri);
-    }
-  };
 
   const handlePlaceOrder = async () => {
     if (deliveryType === 'delivery' && !address.trim()) {
       Alert.alert('Error', 'Please enter your delivery address');
-      return;
-    }
-
-    if (requiresPrescription && !prescriptionImage) {
-      Alert.alert('Prescription Required', 'Please upload a prescription for your order');
       return;
     }
 
@@ -65,12 +37,13 @@ export default function OrderConfirmationScreen() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
           Alert.alert('Permission denied', 'Location permission is needed for delivery');
+          setLoading(false);
           return;
         }
         const currentLocation = await Location.getCurrentPositionAsync({});
         location = {
-          type: 'Point',
-          coordinates: [currentLocation.coords.longitude, currentLocation.coords.latitude]
+          type: 'Point' as const,
+          coordinates: [currentLocation.coords.longitude, currentLocation.coords.latitude] as [number, number]
         };
       }
 
@@ -78,53 +51,33 @@ export default function OrderConfirmationScreen() {
         medicineId: item.medicine._id,
         pharmacyId: item.pharmacy._id,
         quantity: item.quantity,
-        price: item.medicine.price,
       }));
 
-      const status: OrderStatus = 'Placed';
+      const orderData = {
+        items: orderItems,
+        deliveryType,
+        address: deliveryType === 'delivery' ? address : undefined,
+        location: deliveryType === 'delivery' ? location : undefined,
+        paymentMethod,
+      };
 
-      const formData = new FormData();
-      
-      // Add order data
-      formData.append('user', user?._id || '');
-      formData.append('items', JSON.stringify(orderItems));
-      formData.append('totalAmount', getTotalPrice().toString());
-      formData.append('deliveryType', deliveryType);
-      if (deliveryType === 'delivery') {
-        formData.append('address', address);
-        formData.append('location', JSON.stringify(location));
-      }
-      formData.append('status', status);
-      formData.append('paymentMethod', paymentMethod);
-      if (notes.trim()) {
-        formData.append('notes', notes);
-      }
-      
-      // Add prescription image if needed
-      if (requiresPrescription && prescriptionImage) {
-        const localUri = prescriptionImage;
-        const filename = localUri.split('/').pop() || 'prescription.jpg';
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : 'image/jpeg';
-        
-        formData.append('prescription', {
-          uri: localUri,
-          name: filename,
-          type,
-        } as any);
-      }
-
-      // Create order in the database
-      await createOrder(formData);
+      const response = await orderAPI.placeOrder(orderData);
       
       // Clear cart after successful order creation
       clearCart();
       
+      Toast.show({
+        type: 'success',
+        text1: 'Order Placed Successfully',
+        text2: 'Your order has been placed and is being processed',
+      });
+      
       // Redirect to orders screen
-      router.replace('/orders');
-    } catch (error) {
+      router.replace('/(tabs)/orders');
+    } catch (error: any) {
       console.error('Order creation failed:', error);
-      Alert.alert('Error', 'Failed to place order. Please try again.');
+      const errorMessage = error.response?.data?.error || 'Failed to place order. Please try again.';
+      Alert.alert('Error', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -201,24 +154,11 @@ export default function OrderConfirmationScreen() {
           <Card style={styles.sectionCard}>
             <Card.Content>
               <Text variant="titleMedium" style={styles.sectionTitle}>
-                Prescription Upload
+                Prescription Required
               </Text>
               <Text variant="bodySmall" style={styles.prescriptionNote}>
-                Prescription required for some items in your order
+                Some items in your order require a prescription. Please have your prescription ready when the pharmacy contacts you.
               </Text>
-              <Button 
-                mode="outlined" 
-                onPress={pickPrescriptionImage}
-                icon="file-upload"
-                style={styles.uploadButton}
-              >
-                {prescriptionImage ? 'Change Prescription' : 'Upload Prescription'}
-              </Button>
-              {prescriptionImage && (
-                <Text variant="bodySmall" style={styles.uploadSuccessText}>
-                  Prescription uploaded successfully
-                </Text>
-              )}
             </Card.Content>
           </Card>
         )}
@@ -413,13 +353,5 @@ const styles = StyleSheet.create({
   },
   placeOrderButtonContent: {
     height: 50,
-  },
-  uploadButton: {
-    marginTop: 12,
-  },
-  uploadSuccessText: {
-    color: theme.colors.primary,
-    marginTop: 8,
-    textAlign: 'center',
   },
 });

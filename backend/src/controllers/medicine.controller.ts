@@ -4,6 +4,7 @@ import Medicine from '../models/medicine.js';
 import Pharmacy from '../models/pharmacy.js';
 import { createNotification } from '../utils/notification.js';
 import asyncHandler from 'express-async-handler';
+
 export const searchMedicines = async (req: Request, res: Response) => {
   const { query, latitude, longitude, delivery, sort } = req.query as {
     query?: string;
@@ -23,16 +24,18 @@ export const searchMedicines = async (req: Request, res: Response) => {
       quantity: { $gt: 0 },
       outOfStock: false
     })
-      .select('_id name type strength price quantity')
+      .select('_id name type strength price quantity unit description requiresPrescription')
       .populate({
         path: 'pharmacy',
-        select: 'name city deliveryAvailable location rating',
+        select: 'name city deliveryAvailable location rating _id',
         model: Pharmacy,
+        match: { status: 'approved', isActive: true }
       });
 
     let results = medicines
       .filter((medicine) => {
         const pharmacy = medicine.pharmacy as any;
+        if (!pharmacy) return false;
         return !delivery || (pharmacy?.deliveryAvailable === true);
       })
       .map((medicine) => {
@@ -63,10 +66,13 @@ export const searchMedicines = async (req: Request, res: Response) => {
             name: medicine.name,
             strength: medicine.strength,
             type: medicine.type,
-            unit: medicine.unit
+            unit: medicine.unit,
+            description: medicine.description,
+            requiresPrescription: medicine.requiresPrescription
           },
           price: medicine.price,
           pharmacy: {
+            _id: pharmacy._id,
             name: pharmacy.name,
             city: pharmacy.city,
             deliveryAvailable: pharmacy.deliveryAvailable,
@@ -107,6 +113,23 @@ export const getPopularMedicines = async (_req: Request, res: Response) => {
         }
       },
       {
+        $lookup: {
+          from: 'pharmacies',
+          localField: 'pharmacy',
+          foreignField: '_id',
+          as: 'pharmacy'
+        }
+      },
+      {
+        $unwind: '$pharmacy'
+      },
+      {
+        $match: {
+          'pharmacy.status': 'approved',
+          'pharmacy.isActive': true
+        }
+      },
+      {
         $sort: { quantity: -1 }
       },
       {
@@ -121,13 +144,15 @@ export const getPopularMedicines = async (_req: Request, res: Response) => {
           unit: 1,
           quantity: 1,
           price: 1,
+          description: 1,
+          requiresPrescription: 1,
           pharmacy: {
-            _id: 1,
-            name: 1,
-            city: 1,
-            deliveryAvailable: 1,
-            rating: 1,
-            location: 1
+            _id: '$pharmacy._id',
+            name: '$pharmacy.name',
+            city: '$pharmacy.city',
+            deliveryAvailable: '$pharmacy.deliveryAvailable',
+            rating: '$pharmacy.rating',
+            location: '$pharmacy.location'
           }
         }
       }
@@ -154,7 +179,6 @@ export const getMedicinesByPharmacy = asyncHandler(async (req: Request, res: Res
 
   res.status(200).json(medicines);
 });
-
 
 export const getMedicineDetails = async (req: Request, res: Response) => {
   const { id } = req.params;

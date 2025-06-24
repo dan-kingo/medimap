@@ -27,6 +27,18 @@ export default function SearchScreen() {
     getCurrentLocation();
   }, []);
 
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const timeoutId = setTimeout(() => {
+        handleSearch();
+      }, 500); // Debounce search
+
+      return () => clearTimeout(timeoutId);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery, sortBy, deliveryFilter, location]);
+
   const getCurrentLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -50,7 +62,10 @@ export default function SearchScreen() {
   };
 
   const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -171,7 +186,6 @@ export default function SearchScreen() {
             placeholder="Search for medicines..."
             onChangeText={setSearchQuery}
             value={searchQuery}
-            onSubmitEditing={handleSearch}
             loading={loading}
             style={styles.searchBar}
           />
@@ -218,6 +232,20 @@ export default function SearchScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.resultsList}
           />
+        ) : searchQuery.trim() ? (
+          <View style={styles.emptyState}>
+            <MaterialCommunityIcons 
+              name="magnify" 
+              size={64} 
+              color={theme.colors.onSurfaceVariant} 
+            />
+            <Text variant="headlineSmall" style={styles.emptyTitle}>
+              No medicines found
+            </Text>
+            <Text variant="bodyMedium" style={styles.emptySubtitle}>
+              Try adjusting your search terms or filters
+            </Text>
+          </View>
         ) : (
           <View style={styles.emptyState}>
             <MaterialCommunityIcons 
@@ -240,7 +268,7 @@ export default function SearchScreen() {
         <FAB
           icon="cart"
           label={cartItemCount.toString()}
-          onPress={() => router.push('/cart')}
+          onPress={() => router.push('/(tabs)/cart')}
           style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         />
       )}

@@ -26,9 +26,10 @@ export interface Medicine {
   type: 'Tablet' | 'Syrup' | 'Injection';
   price: number;
   requiresPrescription: boolean;
-  pharmacy: Pharmacy;
+  pharmacy?: Pharmacy;
   description?: string;
   available: boolean;
+  unit?: string;
 }
 
 export interface Pharmacy {

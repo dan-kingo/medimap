@@ -58,7 +58,6 @@ export const authAPI = {
   resendOtp: (phone: string) =>
     api.post('/auth/resend-otp', { phone }),
 
-  
   setPassword: (password: string) =>
     api.post('/auth/set-password', { password }),
 
@@ -68,10 +67,9 @@ export const authAPI = {
   forgotPasswordRequestOtp: (phone: string) =>
     api.post('/forgot-password/request-otp', { phone }),
   
-resetPassword: (phone: string, otp: string, newPassword: string) =>
+  resetPassword: (phone: string, otp: string, newPassword: string) =>
     api.post('/auth/reset-password', { phone, otp, newPassword }),
 };
-
 
 // Profile API
 export const profileAPI = {
@@ -120,7 +118,7 @@ export const medicineAPI = {
 
   getPopularMedicines: () => api.get('/medicines/popular'),
 
- getMedicinesByPharmacy: (pharmacyId: string) => api.get(`/medicines/${pharmacyId}`),
+  getMedicinesByPharmacy: (pharmacyId: string) => api.get(`/medicines/${pharmacyId}`),
 
   getMedicineDetails: (id: string) => api.get(`/medicines/${id}`),
 };
@@ -135,12 +133,20 @@ export const homeAPI = {
 
 // Order API
 export const orderAPI = {
-  placeOrder: (data: FormData) =>
-    api.post('/orders', data, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }),
+  placeOrder: (data: {
+    items: Array<{
+      medicineId: string;
+      pharmacyId: string;
+      quantity: number;
+    }>;
+    deliveryType: 'delivery' | 'pickup';
+    address?: string;
+    location?: {
+      type: 'Point';
+      coordinates: [number, number];
+    };
+    paymentMethod?: string;
+  }) => api.post('/orders', data),
 
   getMyOrders: () => api.get('/orders/my'),
 
