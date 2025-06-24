@@ -127,6 +127,7 @@ export const searchMedicines = async (req: Request, res: Response) => {
           medicine: {
             _id: medicine._id,
             name: medicine.name,
+            price: medicine.price,
             strength: medicine.strength,
             type: medicine.type,
             unit: medicine.unit,
