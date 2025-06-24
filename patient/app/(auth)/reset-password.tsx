@@ -1,75 +1,103 @@
+// app/(auth)/reset-password.tsx
 import React, { useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text, TextInput, Button, HelperText } from 'react-native-paper';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 import { theme } from '@/src/constants/theme';
 import { authAPI } from '@/src/services/api';
 import Header from '@/src/components/Header';
 
-export default function SetPasswordScreen() {
-  const params = useLocalSearchParams();
-  const { phone } = params;
-  
-  const [password, setPassword] = useState('');
+export default function ResetPasswordScreen() {
+  const { phone } = useLocalSearchParams();
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSetPassword = async () => {
-    if (!password || password.length < 8) {
-      setError('Password must be at least 8 characters');
+  const handleResetPassword = async () => {
+    if (!otp || otp.length !== 6) {
+      setError('Please enter a valid 6-digit OTP');
       return;
     }
-    
-    if (password !== confirmPassword) {
+
+    if (!newPassword || newPassword.length < 6) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
     setLoading(true);
     try {
-      await authAPI.setPassword(password);
-      
+      const response = await authAPI.resetPassword(
+        phone as string,
+        otp,
+        newPassword
+      );
+
       Toast.show({
         type: 'success',
-        text1: 'Password Set Successfully',
+        text1: 'Password Reset Successful',
         text2: 'You can now login with your new password',
       });
+
+      // Navigate to login or optionally auto-login if token is returned
+      router.replace('/(auth)/login');
       
-      router.replace({
-        pathname: '/login',
-        params: { phone: phone as string }
-      });
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Failed to set password');
+      setError(error.response?.data?.message || 'Failed to reset password');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Header title="Set Password" showBack />
+    <KeyboardAwareScrollView
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      enableOnAndroid={true}
+    >
+      <Header title="Reset Password" showBack />
       
       <View style={styles.content}>
         <Animated.View entering={FadeInDown.delay(200).duration(600)}>
           <Text variant="headlineSmall" style={styles.title}>
-            Create Your Password
+            Set New Password
           </Text>
           <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-            Secure your account with a password
+            Enter the OTP sent to {phone} and your new password
           </Text>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.form}>
           <TextInput
-            label="New Password"
-            value={password}
+            label="OTP Code"
+            value={otp}
             onChangeText={(text) => {
-              setPassword(text);
+              setOtp(text);
+              if (error) setError('');
+            }}
+            placeholder="Enter 6-digit code"
+            keyboardType="numeric"
+            mode="outlined"
+            error={!!error}
+            style={styles.input}
+            maxLength={6}
+          />
+
+          <TextInput
+            label="New Password"
+            value={newPassword}
+            onChangeText={(text) => {
+              setNewPassword(text);
               if (error) setError('');
             }}
             placeholder="Enter at least 6 characters"
@@ -78,9 +106,9 @@ export default function SetPasswordScreen() {
             error={!!error}
             style={styles.input}
           />
-          
+
           <TextInput
-            label="Confirm Password"
+            label="Confirm New Password"
             value={confirmPassword}
             onChangeText={(text) => {
               setConfirmPassword(text);
@@ -90,40 +118,42 @@ export default function SetPasswordScreen() {
             secureTextEntry
             mode="outlined"
             error={!!error}
-            style={[styles.input, { marginTop: 16 }]}
+            style={styles.input}
           />
-          
+
           <HelperText type="error" visible={!!error}>
             {error}
           </HelperText>
 
           <Button
             mode="contained"
-            onPress={handleSetPassword}
+            onPress={handleResetPassword}
             loading={loading}
             disabled={loading}
-            style={styles.button}
+            style={styles.resetButton}
             contentStyle={styles.buttonContent}
           >
-            Set Password
+            Reset Password
           </Button>
         </Animated.View>
       </View>
-    </View>
+    </KeyboardAwareScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    justifyContent: 'center',
+    paddingBottom: 40,
   },
   title: {
     fontWeight: 'bold',
+    marginTop: 32,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -132,15 +162,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   form: {
-    alignItems: 'center',
+    marginBottom: 32,
   },
   input: {
-    width: '100%',
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  button: {
+  resetButton: {
     marginTop: 24,
-    width: '100%',
     borderRadius: 12,
   },
   buttonContent: {

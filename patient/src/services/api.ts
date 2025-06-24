@@ -57,6 +57,7 @@ export const authAPI = {
   resendOtp: (phone: string) =>
     api.post('/auth/resend-otp', { phone }),
 
+  
   setPassword: (password: string) =>
     api.post('/auth/set-password', { password }),
 
@@ -65,10 +66,11 @@ export const authAPI = {
 
   forgotPasswordRequestOtp: (phone: string) =>
     api.post('/forgot-password/request-otp', { phone }),
-
-  verifyForgotPasswordOtp: (phone: string, otp: string) =>
-    api.post('/forgot-password/verify-otp', { phone, otp }),
+  
+resetPassword: (phone: string, otp: string, newPassword: string) =>
+    api.post('/auth/reset-password', { phone, otp, newPassword }),
 };
+
 
 // Profile API
 export const profileAPI = {

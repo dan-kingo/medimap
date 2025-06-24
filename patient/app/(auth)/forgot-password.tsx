@@ -29,7 +29,11 @@ export default function ForgotPasswordScreen() {
         text2: 'Password reset code sent to your phone',
       });
       // Navigate to a password reset screen (you can create this)
-      router.back();
+      router.push({
+        pathname: '/(auth)/reset-password',
+        params: { phone }
+      });
+
     } catch (error: any) {
       setError(error.response?.data?.message || 'Failed to send OTP');
     } finally {
