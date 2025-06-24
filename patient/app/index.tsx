@@ -1,29 +1,24 @@
-import { Text, View } from "react-native";
-import { StyleSheet } from "react-native";
+import { useEffect } from 'react';
+import { Redirect } from 'expo-router';
+import { View } from 'react-native';
+import { ActivityIndicator } from 'react-native-paper';
+
+import { useAuthStore } from '@/src/store/authStore';
 
 export default function Index() {
-  return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <Text style={styles.center}>welcome to medimap search a nearby pharmacy now!</Text>
-    </View>
-  );
-}
+  const { isAuthenticated, loading } = useAuthStore();
 
-const styles = StyleSheet.create({   
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  center : {     textAlign: "center" },
-  text: {
-    fontSize: 20,
-    color: "#333",
-  },
-});
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Redirect href="/(tabs)" />;
+  }
+
+  return <Redirect href="/(auth)" />;
+}
