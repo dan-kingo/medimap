@@ -32,7 +32,11 @@ export default function OrderConfirmationScreen() {
     setLoading(true);
 
     try {
-      let location: { type: 'Point'; coordinates: [number, number]; } | undefined = undefined;
+      let location: { type: "Point"; coordinates: [number, number] } = {
+        type: "Point",
+        coordinates: [0, 0] // Default coordinates for pickup
+      };
+
       if (deliveryType === 'delivery') {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
@@ -42,8 +46,8 @@ export default function OrderConfirmationScreen() {
         }
         const currentLocation = await Location.getCurrentPositionAsync({});
         location = {
-          type: 'Point' as const,
-          coordinates: [currentLocation.coords.longitude, currentLocation.coords.latitude] as [number, number]
+          type: "Point",
+          coordinates: [currentLocation.coords.longitude, currentLocation.coords.latitude]
         };
       }
 
@@ -53,17 +57,21 @@ export default function OrderConfirmationScreen() {
         quantity: item.quantity,
       }));
 
+      // Use pharmacy address as default for pickup orders
+      const defaultPickupAddress = items.length > 0 
+        ? `Pickup at ${items[0].pharmacy.name}}`
+        : 'Pickup at pharmacy';
+
       const orderData = {
         items: orderItems,
         deliveryType,
-        address: deliveryType === 'delivery' ? address : undefined,
+        address: deliveryType === 'delivery' ? address : defaultPickupAddress,
         location,
         paymentMethod,
       };
 
       const response = await orderAPI.placeOrder(orderData);
       
-      // Clear cart after successful order creation
       clearCart();
       
       Toast.show({
@@ -72,7 +80,6 @@ export default function OrderConfirmationScreen() {
         text2: 'Your order has been placed and is being processed',
       });
       
-      // Redirect to orders screen
       router.replace('/(tabs)/orders');
     } catch (error: any) {
       console.error('Order creation failed:', error);
@@ -143,7 +150,9 @@ export default function OrderConfirmationScreen() {
                   color={theme.colors.primary} 
                 />
                 <Text variant="bodySmall" style={styles.pickupText}>
-                  You'll receive pickup instructions after order confirmation
+                  {items.length > 0 
+                    ? `You'll pickup your order at ${items[0].pharmacy.name}, ${items[0].pharmacy.address}`
+                    : 'You can pickup your order at the selected pharmacy'}
                 </Text>
               </View>
             )}
@@ -301,10 +310,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
+    padding: 8,
+    backgroundColor: theme.colors.surfaceVariant,
+    borderRadius: 8,
   },
   pickupText: {
     marginLeft: 8,
-    opacity: 0.7,
     flex: 1,
   },
   orderItem: {
