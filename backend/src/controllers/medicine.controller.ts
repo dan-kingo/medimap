@@ -1,7 +1,6 @@
 // controllers/medicine.controller.ts
 import { Request, Response } from 'express';
 import Medicine from '../models/medicine.js';
-import Inventory from '../models/inventory.js';
 import Pharmacy from '../models/pharmacy.js';
 import { createNotification } from '../utils/notification.js';
 
@@ -19,29 +18,25 @@ export const searchMedicines = async (req: Request, res: Response) => {
       ? { name: { $regex: new RegExp(query, 'i') } }
       : {};
 
-    const medicines = await Medicine.find(medicineFilter).select('_id name type strength');
-
-    const medicineIds = medicines.map((m) => m._id);
-
-    const inventory = await Inventory.find({
-      medicine: { $in: medicineIds },
-      stock: { $gt: 0 },
+    const medicines = await Medicine.find({
+      ...medicineFilter,
+      quantity: { $gt: 0 },
+      outOfStock: false
     })
-      .populate('medicine', 'name strength type')
+      .select('_id name type strength price quantity')
       .populate({
         path: 'pharmacy',
         select: 'name city deliveryAvailable location rating',
         model: Pharmacy,
       });
 
-    let results = inventory
-      .filter((inv) => {
-        const pharmacy = inv.pharmacy as any;
-        // Filter deliveryAvailable if delivery param is true
+    let results = medicines
+      .filter((medicine) => {
+        const pharmacy = medicine.pharmacy as any;
         return !delivery || (pharmacy?.deliveryAvailable === true);
       })
-      .map((inv) => {
-        const pharmacy = inv.pharmacy as any;
+      .map((medicine) => {
+        const pharmacy = medicine.pharmacy as any;
         let distance: number | null = null;
 
         if (latitude && longitude && pharmacy?.location?.coordinates) {
@@ -63,8 +58,14 @@ export const searchMedicines = async (req: Request, res: Response) => {
         }
 
         return {
-          medicine: inv.medicine,
-          price: inv.price,
+          medicine: {
+            _id: medicine._id,
+            name: medicine.name,
+            strength: medicine.strength,
+            type: medicine.type,
+            unit: medicine.unit
+          },
+          price: medicine.price,
           pharmacy: {
             name: pharmacy.name,
             city: pharmacy.city,
@@ -72,11 +73,11 @@ export const searchMedicines = async (req: Request, res: Response) => {
             rating: pharmacy.rating ?? null,
             distance: distance ?? null,
           },
-          available: inv.stock > 0,
+          available: medicine.quantity > 0,
         };
       });
 
-    // 🧠 Sorting
+    // Sorting
     if (sort === 'price_asc') {
       results.sort((a, b) => a.price - b.price);
     } else if (sort === 'price_desc') {
@@ -89,82 +90,68 @@ export const searchMedicines = async (req: Request, res: Response) => {
       });
     }
 
-    res.json(results);
+    return res.json(results);
   } catch (err) {
     console.error('Search error:', err);
-    res.status(500).json({ message: 'Failed to search medicines' });
+    return res.status(500).json({ message: 'Failed to search medicines' });
   }
 };
-
 
 export const getPopularMedicines = async (_req: Request, res: Response) => {
   try {
-    const popular = await Inventory.aggregate([
+    const popular = await Medicine.aggregate([
       {
-        $group: {
-          _id: '$medicine',
-          totalQuantity: { $sum: '$quantity' },
-        },
+        $match: { 
+          quantity: { $gt: 0 },
+          outOfStock: false
+        }
       },
       {
-        $sort: { totalQuantity: -1 },
+        $sort: { quantity: -1 }
       },
       {
-        $limit: 10,
-      },
-      { 
-        $lookup: {
-          from: 'medicines',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'medicine',
-        },
-      },
-      {
-        $unwind: '$medicine',
+        $limit: 10
       },
       {
         $project: {
-          _id: '$medicine._id',
-          name: '$medicine.name',
-          strength: '$medicine.strength',
-          type: '$medicine.type',
-          totalQuantity: 1,
-        },
-      },
+          _id: 1,
+          name: 1,
+          strength: 1,
+          type: 1,
+          unit: 1,
+          quantity: 1
+        }
+      }
     ]);
 
-    res.status(200).json(popular);
+    return res.status(200).json(popular);
   } catch (err) {
     console.error('Error fetching popular medicines:', err);
-    res.status(500).json({ message: 'Failed to fetch popular medicines' });
+    return res.status(500).json({ message: 'Failed to fetch popular medicines' });
   }
 };
-
-
 
 export const getMedicineDetails = async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const medicine = await Medicine.findById(id).populate({
-      path: 'pharmacy',
-      select: 'name phone email address city deliveryAvailable rating location',
-    });
+    const medicine = await Medicine.findById(id)
+      .select('-__v -createdAt -updatedAt')
+      .populate({
+        path: 'pharmacy',
+        select: 'name phone email address city deliveryAvailable rating location',
+      });
 
     if (!medicine) {
-       res.status(404).json({ message: 'Medicine not found' });
-       return
+      return res.status(404).json({ message: 'Medicine not found' });
     }
 
-    res.status(200).json(medicine);
+    return res.status(200).json(medicine);
   } catch (error) {
     console.error('Error fetching medicine details:', error);
-    res.status(500).json({ error: 'Server error' });
+    return res.status(500).json({ error: 'Server error' });
   }
 };
-
-
 
 export const addMedicine = async (req: Request, res: Response) => {
   try {
@@ -172,17 +159,16 @@ export const addMedicine = async (req: Request, res: Response) => {
     const pharmacy = await Pharmacy.findOne({ user: userId });
 
     if (!pharmacy) {
-       res.status(404).json({ error: "Pharmacy not found for this user." });
-       return
+      return res.status(404).json({ error: "Pharmacy not found for this user." });
     }
 
     const {
       name,
       strength,
-      unit,
+      unit = '',
       type,
       description,
-      requiresPrescription,
+      requiresPrescription = false,
       price,
       quantity,
     } = req.body;
@@ -199,24 +185,38 @@ export const addMedicine = async (req: Request, res: Response) => {
       price,
       quantity,
       outOfStock,
-      pharmacy: pharmacy._id, // Correct reference
+      pharmacy: pharmacy._id,
     });
 
-  if(quantity < 5) {
-    await createNotification({
-      userId: userId!,
-      message: `Low stock alert for ${newMedicine.name}. Only ${quantity} left.`,
-      type: 'in-app',
-    });
-  }
+    if (quantity < 5) {
+      await createNotification({
+        userId: userId!,
+        message: `Low stock alert for ${newMedicine.name}. Only ${quantity} left.`,
+        type: 'in-app',
+      });
+    }
 
-  res.status(201).json({ message: 'Medicine added', medicine: newMedicine });
+    return res.status(201).json({ 
+      message: 'Medicine added successfully',
+      medicine: {
+        _id: newMedicine._id,
+        name: newMedicine.name,
+        strength: newMedicine.strength,
+        unit: newMedicine.unit,
+        type: newMedicine.type,
+        description: newMedicine.description,
+        requiresPrescription: newMedicine.requiresPrescription,
+        price: newMedicine.price,
+        quantity: newMedicine.quantity,
+        outOfStock: newMedicine.outOfStock,
+        pharmacy: newMedicine.pharmacy
+      }
+    });
   } catch (error) {
     console.error('Add medicine error:', error);
-    res.status(500).json({ error: 'Failed to add medicine' });
+    return res.status(500).json({ error: 'Failed to add medicine' });
   }
 };
-
 
 export const updateMedicine = async (req: Request, res: Response) => {
   try {
@@ -232,18 +232,29 @@ export const updateMedicine = async (req: Request, res: Response) => {
     const updatedMedicine = await Medicine.findOneAndUpdate(
       { _id: medicineId, pharmacy: pharmacy?._id },
       updates,
-      { new: true }
-    );
+      { new: true, runValidators: true }
+    ).select('-__v -createdAt -updatedAt');
 
     if (!updatedMedicine) {
-       res.status(404).json({ error: 'Medicine not found' });
-       return
+      return res.status(404).json({ error: 'Medicine not found or not owned by your pharmacy' });
     }
 
-    res.json({ message: 'Medicine updated', medicine: updatedMedicine });
+    // Check if we need to send low stock notification
+    if (updates.quantity !== undefined && updates.quantity < 5) {
+      await createNotification({
+        userId: userId!,
+        message: `Low stock alert for ${updatedMedicine.name}. Only ${updatedMedicine.quantity} left.`,
+        type: 'in-app',
+      });
+    }
+
+    return res.json({ 
+      message: 'Medicine updated successfully',
+      medicine: updatedMedicine
+    });
   } catch (error) {
     console.error('Update medicine error:', error);
-    res.status(500).json({ error: 'Failed to update medicine' });
+    return res.status(500).json({ error: 'Failed to update medicine' });
   }
 };
 
@@ -259,14 +270,16 @@ export const deleteMedicine = async (req: Request, res: Response) => {
     });
 
     if (!deletedMedicine) {
-       res.status(404).json({ error: 'Medicine not found' });
-       return
+      return res.status(404).json({ error: 'Medicine not found or not owned by your pharmacy' });
     }
 
-    res.json({ message: 'Medicine removed' });
+    return res.json({ 
+      message: 'Medicine deleted successfully',
+      medicineId: deletedMedicine._id
+    });
   } catch (error) {
     console.error('Delete medicine error:', error);
-    res.status(500).json({ error: 'Failed to remove medicine' });
+    return res.status(500).json({ error: 'Failed to delete medicine' });
   }
 };
 
@@ -276,21 +289,23 @@ export const markOutOfStock = async (req: Request, res: Response) => {
     const pharmacy = await Pharmacy.findOne({ user: userId });
     const medicineId = req.params.id;
 
-    const medicine = await Medicine.findOne({ _id: medicineId, pharmacy: pharmacy?._id });
+    const medicine = await Medicine.findOneAndUpdate(
+      { _id: medicineId, pharmacy: pharmacy?._id },
+      { outOfStock: true, quantity: 0 },
+      { new: true }
+    ).select('-__v -createdAt -updatedAt');
 
     if (!medicine) {
-       res.status(404).json({ error: 'Medicine not found' });
-       return
+      return res.status(404).json({ error: 'Medicine not found or not owned by your pharmacy' });
     }
 
-    medicine.outOfStock = true;
-    medicine.quantity = 0;
-    await medicine.save();
-
-    res.json({ message: 'Medicine marked as out of stock', medicine });
+    return res.json({ 
+      message: 'Medicine marked as out of stock',
+      medicine
+    });
   } catch (error) {
     console.error('Mark out of stock error:', error);
-    res.status(500).json({ error: 'Failed to update medicine status' });
+    return res.status(500).json({ error: 'Failed to update medicine status' });
   }
 };
 
@@ -299,11 +314,16 @@ export const getMedicines = async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const pharmacy = await Pharmacy.findOne({ user: userId });
 
-    const medicines = await Medicine.find({ pharmacy: pharmacy?._id });
+    const medicines = await Medicine.find({ pharmacy: pharmacy?._id })
+      .select('-__v -createdAt -updatedAt')
+      .sort({ createdAt: -1 });
 
-    res.json({ medicines });
+    return res.json({ 
+      count: medicines.length,
+      medicines 
+    });
   } catch (error) {
     console.error('Get medicines error:', error);
-    res.status(500).json({ error: 'Failed to get medicines' });
+    return res.status(500).json({ error: 'Failed to get medicines' });
   }
 };

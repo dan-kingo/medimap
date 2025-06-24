@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { Text, Card, Chip, FAB, Searchbar } from 'react-native-paper';
 import { router } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
@@ -24,6 +24,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   useEffect(() => {
     getCurrentLocation();
@@ -38,8 +39,10 @@ export default function HomeScreen() {
 
   const getCurrentLocation = async () => {
     try {
+      setLocationError(null);
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
+        setLocationError('Location permission denied');
         Toast.show({
           type: 'error',
           text1: 'Permission Denied',
@@ -55,6 +58,7 @@ export default function HomeScreen() {
       });
     } catch (error) {
       console.log('Location error:', error);
+      setLocationError('Unable to get your location');
       Toast.show({
         type: 'error',
         text1: 'Location Error',
@@ -69,17 +73,36 @@ export default function HomeScreen() {
       setPopularMedicines(response.data.slice(0, 5));
     } catch (error) {
       console.error('Error fetching popular medicines:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to fetch popular medicines',
+      });
     }
   };
 
   const fetchNearbyPharmacies = async () => {
-    if (!location) return;
+    if (!location) {
+      setLocationError('Location not available');
+      return;
+    }
     
     try {
+      setLoading(true);
       const response = await homeAPI.getNearbyPharmacies(location.latitude, location.longitude);
       setNearbyPharmacies(response.data.pharmacies.slice(0, 5));
-    } catch (error) {
+      setLocationError(null);
+    } catch (error: any) {
       console.error('Error fetching nearby pharmacies:', error);
+      setNearbyPharmacies([]);
+      
+      if (error.response?.status === 400) {
+        setLocationError('Please enable location services');
+      } else {
+        setLocationError('Failed to fetch nearby pharmacies');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -96,7 +119,7 @@ export default function HomeScreen() {
     setRefreshing(true);
     await Promise.all([
       fetchPopularMedicines(),
-      location ? fetchNearbyPharmacies() : Promise.resolve(),
+      getCurrentLocation(), // Refresh location as well
     ]);
     setRefreshing(false);
   };
@@ -214,36 +237,65 @@ export default function HomeScreen() {
               Refresh
             </Text>
           </View>
-          {nearbyPharmacies.map((pharmacy) => (
-            <Card key={pharmacy._id} style={styles.pharmacyCard}>
-              <Card.Content>
-                <View style={styles.pharmacyHeader}>
-                  <Text variant="titleSmall">{pharmacy.name}</Text>
-                  {pharmacy.distance && (
-                    <Text variant="bodySmall" style={styles.distance}>
-                      {pharmacy.distance.toFixed(1)} km
-                    </Text>
-                  )}
-                </View>
-                <Text variant="bodySmall" style={styles.pharmacyLocation}>
-                  {pharmacy.city}
-                </Text>
-                <View style={styles.pharmacyFeatures}>
-                  {pharmacy.deliveryAvailable && (
-                    <Chip mode="outlined" compact>
-                      Delivery Available
-                    </Chip>
-                  )}
-                  {pharmacy.rating && (
-                    <View style={styles.rating}>
-                      <MaterialCommunityIcons name="star" size={16} color={theme.colors.primary} />
-                      <Text variant="bodySmall">{pharmacy.rating}</Text>
-                    </View>
-                  )}
-                </View>
-              </Card.Content>
-            </Card>
-          ))}
+          
+          {loading ? (
+            <ActivityIndicator animating={true} color={theme.colors.primary} />
+          ) : locationError ? (
+            <View style={styles.errorContainer}>
+              <MaterialCommunityIcons 
+                name="map-marker-off" 
+                size={40} 
+                color={theme.colors.error} 
+              />
+              <Text style={styles.errorText}>{locationError}</Text>
+              <Text 
+                style={[styles.errorActionText, { color: theme.colors.primary }]}
+                onPress={getCurrentLocation}
+              >
+                Try Again
+              </Text>
+            </View>
+          ) : nearbyPharmacies.length > 0 ? (
+            nearbyPharmacies.map((pharmacy) => (
+              <Card key={pharmacy._id} style={styles.pharmacyCard}>
+                <Card.Content>
+                  <View style={styles.pharmacyHeader}>
+                    <Text variant="titleSmall">{pharmacy.name}</Text>
+                    {pharmacy.distance && (
+                      <Text variant="bodySmall" style={styles.distance}>
+                        {pharmacy.distance.toFixed(1)} km
+                      </Text>
+                    )}
+                  </View>
+                  <Text variant="bodySmall" style={styles.pharmacyLocation}>
+                    {pharmacy.city}
+                  </Text>
+                  <View style={styles.pharmacyFeatures}>
+                    {pharmacy.deliveryAvailable && (
+                      <Chip mode="outlined" compact>
+                        Delivery Available
+                      </Chip>
+                    )}
+                    {pharmacy.rating && (
+                      <View style={styles.rating}>
+                        <MaterialCommunityIcons name="star" size={16} color={theme.colors.primary} />
+                        <Text variant="bodySmall">{pharmacy.rating}</Text>
+                      </View>
+                    )}
+                  </View>
+                </Card.Content>
+              </Card>
+            ))
+          ) : (
+            <View style={styles.errorContainer}>
+              <MaterialCommunityIcons 
+                name="map-marker-question" 
+                size={40} 
+                color={theme.colors.error} 
+              />
+              <Text style={styles.errorText}>No nearby pharmacies found</Text>
+            </View>
+          )}
         </Animated.View>
       </ScrollView>
 
@@ -359,5 +411,19 @@ const styles = StyleSheet.create({
     margin: 16,
     right: 0,
     bottom: 0,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  errorText: {
+    marginTop: 10,
+    textAlign: 'center',
+    color: theme.colors.error,
+  },
+  errorActionText: {
+    marginTop: 10,
+    fontWeight: '500',
   },
 });

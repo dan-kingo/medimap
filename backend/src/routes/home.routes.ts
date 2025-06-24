@@ -7,6 +7,6 @@ import { nearbyPharmaciesQuerySchema } from '../validations/home.schema.js';
 
 const router = express.Router();
 
-router.get('/', authenticateUser, validate(nearbyPharmaciesQuerySchema), getNearbyPharmacies);
+router.get('/', authenticateUser, getNearbyPharmacies);
 
 export default router;
