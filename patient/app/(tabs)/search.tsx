@@ -31,7 +31,7 @@ export default function SearchScreen() {
     if (searchQuery.trim()) {
       const timeoutId = setTimeout(() => {
         handleSearch();
-      }, 500); // Debounce search
+      }, 500);
 
       return () => clearTimeout(timeoutId);
     } else {
@@ -43,11 +43,7 @@ export default function SearchScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Toast.show({
-          type: 'error',
-          text1: 'Permission Denied',
-          text2: 'Location permission is required for better search results',
-        });
+        console.log('Location permission denied');
         return;
       }
 
@@ -57,7 +53,7 @@ export default function SearchScreen() {
         longitude: location.coords.longitude,
       });
     } catch (error) {
-      console.log('Location error:', error);
+      console.error('Location error:', error);
     }
   };
 
@@ -69,25 +65,46 @@ export default function SearchScreen() {
 
     setLoading(true);
     try {
-      const params: any = {
-        query: searchQuery.trim(),
-        delivery: deliveryFilter,
-        sort: sortBy === 'distance' ? undefined : sortBy,
-      };
+      const params: {
+        query?: string;
+        latitude?: number;
+        longitude?: number;
+        delivery?: boolean;
+        sort?: 'price_asc' | 'price_desc';
+      } = {};
+
+      params.query = searchQuery.trim();
+
+      if (deliveryFilter) {
+        params.delivery = true;
+      }
+
+      if (sortBy !== 'distance') {
+        params.sort = sortBy;
+      }
 
       if (location) {
         params.latitude = location.latitude;
         params.longitude = location.longitude;
       }
 
+      console.log('Search params:', params);
+
       const response = await medicineAPI.searchMedicines(params);
+      console.log('Search response:', response.data);
       setSearchResults(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Search error:', error);
+      console.log('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+
       Toast.show({
         type: 'error',
         text1: 'Search Failed',
-        text2: 'Unable to search medicines. Please try again.',
+        text2: error.response?.data?.message || 'Unable to search medicines',
       });
     } finally {
       setLoading(false);
@@ -193,34 +210,49 @@ export default function SearchScreen() {
 
         {/* Filters */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersSection}>
-          <Chip
-            mode={sortBy === 'distance' ? 'flat' : 'outlined'}
-            onPress={() => setSortBy('distance')}
-            style={styles.filterChip}
-          >
-            Nearest
-          </Chip>
-          <Chip
-            mode={sortBy === 'price_asc' ? 'flat' : 'outlined'}
-            onPress={() => setSortBy('price_asc')}
-            style={styles.filterChip}
-          >
-            Price: Low to High
-          </Chip>
-          <Chip
-            mode={sortBy === 'price_desc' ? 'flat' : 'outlined'}
-            onPress={() => setSortBy('price_desc')}
-            style={styles.filterChip}
-          >
-            Price: High to Low
-          </Chip>
-          <Chip
-            mode={deliveryFilter ? 'flat' : 'outlined'}
-            onPress={() => setDeliveryFilter(!deliveryFilter)}
-            style={styles.filterChip}
-          >
-            Delivery Available
-          </Chip>
+          <View style={styles.filterContainer}>
+            <Chip
+              mode={sortBy === 'distance' ? 'flat' : 'outlined'}
+              onPress={() => setSortBy('distance')}
+              style={styles.filterChip}
+              selected={sortBy === 'distance'}
+            >
+              <Text style={styles.filterText}>Nearest</Text>
+            </Chip>
+          </View>
+          
+          <View style={styles.filterContainer}>
+            <Chip
+              mode={sortBy === 'price_asc' ? 'flat' : 'outlined'}
+              onPress={() => setSortBy('price_asc')}
+              style={styles.filterChip}
+              selected={sortBy === 'price_asc'}
+            >
+              <Text style={styles.filterText}>Price: Low to High</Text>
+            </Chip>
+          </View>
+          
+          <View style={styles.filterContainer}>
+            <Chip
+              mode={sortBy === 'price_desc' ? 'flat' : 'outlined'}
+              onPress={() => setSortBy('price_desc')}
+              style={styles.filterChip}
+              selected={sortBy === 'price_desc'}
+            >
+              <Text style={styles.filterText}>Price: High to Low</Text>
+            </Chip>
+          </View>
+          
+          <View style={styles.filterContainer}>
+            <Chip
+              mode={deliveryFilter ? 'flat' : 'outlined'}
+              onPress={() => setDeliveryFilter(!deliveryFilter)}
+              style={styles.filterChip}
+              selected={deliveryFilter}
+            >
+              <Text style={styles.filterText}>Delivery Available</Text>
+            </Chip>
+          </View>
         </ScrollView>
 
         {/* Search Results */}
@@ -293,8 +325,16 @@ const styles = StyleSheet.create({
   filtersSection: {
     marginBottom: 16,
   },
+  filterContainer: {
+    paddingVertical: 4,
+  },
+  filterText: {
+    paddingHorizontal: 8,
+  },
   filterChip: {
     marginRight: 8,
+    height: 40,
+    justifyContent: 'center',
   },
   resultsList: {
     paddingBottom: 100,

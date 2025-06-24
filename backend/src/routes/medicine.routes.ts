@@ -7,7 +7,7 @@ import { authenticateUser } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('/search', validate(searchMedicinesQuerySchema), searchMedicines);
+router.get('/search', searchMedicines);
 router.get('/popular', getPopularMedicines);
 router.get('/:pharmacyId', authenticateUser, getMedicinesByPharmacy);
 router.get('/:id', validate(medicineDetailsParamsSchema), getMedicineDetails); // Assuming this is for getting details of a specific medicine

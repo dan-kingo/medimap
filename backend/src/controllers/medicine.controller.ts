@@ -5,38 +5,101 @@ import Pharmacy from '../models/pharmacy.js';
 import { createNotification } from '../utils/notification.js';
 import asyncHandler from 'express-async-handler';
 
+
 export const searchMedicines = async (req: Request, res: Response) => {
-  const { query, latitude, longitude, delivery, sort } = req.query as {
-    query?: string;
-    latitude?: string;
-    longitude?: string;
-    delivery?: string;
-    sort?: string; // 'price_asc', 'price_desc', etc.
-  };
+  console.log('Search request received with query:', req.query);
 
   try {
-    const medicineFilter = query
-      ? { name: { $regex: new RegExp(query, 'i') } }
-      : {};
+    const { query, latitude, longitude, delivery, sort } = req.query as {
+      query?: string;
+      latitude?: string;
+      longitude?: string;
+      delivery?: string;
+      sort?: string;
+    };
 
-    const medicines = await Medicine.find({
-      ...medicineFilter,
+    // Validate query parameters
+    if (!query) {
+      console.log('No search query provided');
+      return res.status(400).json({ message: 'Search query is required' });
+    }
+
+    // Validate coordinates if provided
+    if (latitude || longitude) {
+      if (!latitude || !longitude) {
+        console.log('Invalid coordinates - both latitude and longitude must be provided');
+        return res.status(400).json({ 
+          message: 'Both latitude and longitude must be provided' 
+        });
+      }
+
+      const latNum = parseFloat(latitude);
+      const lngNum = parseFloat(longitude);
+      
+      if (isNaN(latNum) || isNaN(lngNum)) {
+        console.log('Invalid coordinate values');
+        return res.status(400).json({ 
+          message: 'Latitude and longitude must be valid numbers' 
+        });
+      }
+
+      if (latNum < -90 || latNum > 90 || lngNum < -180 || lngNum > 180) {
+        console.log('Coordinates out of valid range');
+        return res.status(400).json({ 
+          message: 'Invalid coordinate values' 
+        });
+      }
+    }
+
+    // Validate sort parameter
+    const validSortOptions = ['price_asc', 'price_desc', 'distance'];
+    if (sort && !validSortOptions.includes(sort)) {
+      console.log('Invalid sort parameter:', sort);
+      return res.status(400).json({ 
+        message: 'Invalid sort parameter' 
+      });
+    }
+
+    // Build the medicine filter
+    const medicineFilter: any = {
+      name: { $regex: new RegExp(query, 'i') },
       quantity: { $gt: 0 },
       outOfStock: false
-    })
+    };
+
+    // Build the pharmacy filter
+    const pharmacyFilter: any = {
+      status: 'approved',
+      isActive: true
+    };
+
+    if (delivery === 'true') {
+      pharmacyFilter.deliveryAvailable = true;
+    }
+
+    console.log('Executing search with filters:', {
+      medicineFilter,
+      pharmacyFilter
+    });
+
+    const medicines = await Medicine.find(medicineFilter)
       .select('_id name type strength price quantity unit description requiresPrescription')
       .populate({
         path: 'pharmacy',
         select: 'name city deliveryAvailable location rating _id',
         model: Pharmacy,
-        match: { status: 'approved', isActive: true }
+        match: pharmacyFilter
       });
+
+    console.log(`Found ${medicines.length} potential matches before filtering`);
 
     let results = medicines
       .filter((medicine) => {
-        const pharmacy = medicine.pharmacy as any;
-        if (!pharmacy) return false;
-        return !delivery || (pharmacy?.deliveryAvailable === true);
+        if (!medicine.pharmacy) {
+          console.log(`Medicine ${medicine._id} filtered out - no pharmacy`);
+          return false;
+        }
+        return true;
       })
       .map((medicine) => {
         const pharmacy = medicine.pharmacy as any;
@@ -47,15 +110,15 @@ export const searchMedicines = async (req: Request, res: Response) => {
           const lat2 = parseFloat(latitude);
           const lng2 = parseFloat(longitude);
 
-          const toRad = (deg: number) => (deg * Math.PI) / 180;
+          // Haversine formula
           const R = 6371;
-          const dLat = toRad(lat2 - lat1);
-          const dLng = toRad(lng2 - lng1);
+          const dLat = (lat2 - lat1) * (Math.PI / 180);
+          const dLng = (lng2 - lng1) * (Math.PI / 180);
           const a =
-            Math.sin(dLat / 2) ** 2 +
-            Math.cos(toRad(lat1)) *
-              Math.cos(toRad(lat2)) *
-              Math.sin(dLng / 2) ** 2;
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * (Math.PI / 180)) *
+            Math.cos(lat2 * (Math.PI / 180)) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
           const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
           distance = R * c;
         }
@@ -83,26 +146,31 @@ export const searchMedicines = async (req: Request, res: Response) => {
         };
       });
 
+    console.log(`Found ${results.length} valid results after filtering`);
+
     // Sorting
     if (sort === 'price_asc') {
       results.sort((a, b) => a.price - b.price);
     } else if (sort === 'price_desc') {
       results.sort((a, b) => b.price - a.price);
-    } else if (latitude && longitude) {
+    } else {
       results.sort((a, b) => {
-        const distA = a.pharmacy.distance ?? 99999;
-        const distB = b.pharmacy.distance ?? 99999;
+        const distA = a.pharmacy.distance ?? Infinity;
+        const distB = b.pharmacy.distance ?? Infinity;
         return distA - distB;
       });
     }
 
+    console.log('Returning search results:', results);
     return res.json(results);
   } catch (err) {
     console.error('Search error:', err);
-    return res.status(500).json({ message: 'Failed to search medicines' });
+    return res.status(500).json({ 
+      message: 'Failed to search medicines',
+      error: err instanceof Error ? err.message : 'Unknown error'
+    });
   }
 };
-
 export const getPopularMedicines = async (_req: Request, res: Response) => {
   try {
     const popular = await Medicine.aggregate([
