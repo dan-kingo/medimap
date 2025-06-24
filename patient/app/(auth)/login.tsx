@@ -61,7 +61,7 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Header title="Sign In" showBack />
+      <Header title="Sign In"  />
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Animated.View entering={FadeInDown.delay(200).duration(600)}>
