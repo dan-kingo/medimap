@@ -261,8 +261,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                         <div className="max-h-64 overflow-y-auto">
                           {notifications.map((notification) => (
                             <div 
-                              key={notification.id}
-                              onClick={() => handleMarkAsRead(notification.id)}
+                              key={notification._id}
+                              onClick={() => handleMarkAsRead(notification._id)}
                               className={`px-4 py-3 text-sm cursor-pointer ${!notification.isRead ? 'bg-blue-50' : 'bg-white'} hover:bg-gray-50`}
                             >
                               <div className="flex justify-between">

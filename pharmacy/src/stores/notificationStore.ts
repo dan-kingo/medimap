@@ -1,7 +1,7 @@
 import {create}  from 'zustand'
 
 interface Notification {
-  id: string
+  _id: string
   message: string
   isRead: boolean
   createdAt: string
@@ -34,7 +34,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   markAsRead: (id) => {
     const { notifications } = get()
     const updatedNotifications = notifications.map(n => 
-      n.id === id ? { ...n, isRead: true } : n
+      n._id === id ? { ...n, isRead: true } : n
     )
     const unreadCount = updatedNotifications.filter(n => !n.isRead).length
     set({ notifications: updatedNotifications, unreadCount })
