@@ -27,6 +27,7 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: () => {
             logout();
+            router.push('/login');
             Toast.show({
               type: 'success',
               text1: 'Signed Out',

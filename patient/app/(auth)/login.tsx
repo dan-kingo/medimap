@@ -16,7 +16,6 @@ export default function LoginScreen() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [useOtp, setUseOtp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ phone?: string; password?: string }>({});
 
@@ -27,7 +26,7 @@ export default function LoginScreen() {
       newErrors.phone = 'Phone number is required';
     }
     
-    if (!useOtp && !password) {
+    if (!password) {
       newErrors.password = 'Password is required';
     }
     
@@ -35,7 +34,7 @@ export default function LoginScreen() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handlePasswordLogin = async () => {
+  const handleLogin = async () => {
     if (!validateForm()) return;
 
     setLoading(true);
@@ -54,30 +53,6 @@ export default function LoginScreen() {
         type: 'error',
         text1: 'Login Failed',
         text2: error.response?.data?.message || 'Invalid credentials',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOtpLogin = async () => {
-    if (!phone) {
-      setErrors({ phone: 'Phone number is required' });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await authAPI.requestOtp({ phone });
-      router.push({
-        pathname: '/(auth)/otp-verification',
-        params: { phone, isLogin: 'true' },
-      });
-    } catch (error: any) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: error.response?.data?.message || 'Failed to send OTP',
       });
     } finally {
       setLoading(false);
@@ -116,50 +91,38 @@ export default function LoginScreen() {
             {errors.phone}
           </HelperText>
 
-          {!useOtp && (
-            <>
-              <TextInput
-                label="Password"
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  if (errors.password) setErrors({ ...errors, password: undefined });
-                }}
-                placeholder="Enter your password"
-                secureTextEntry={!showPassword}
-                mode="outlined"
-                error={!!errors.password}
-                style={styles.input}
-                right={
-                  <TextInput.Icon
-                    icon={showPassword ? 'eye-off' : 'eye'}
-                    onPress={() => setShowPassword(!showPassword)}
-                  />
-                }
+          <TextInput
+            label="Password"
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (errors.password) setErrors({ ...errors, password: undefined });
+            }}
+            placeholder="Enter your password"
+            secureTextEntry={!showPassword}
+            mode="outlined"
+            error={!!errors.password}
+            style={styles.input}
+            right={
+              <TextInput.Icon
+                icon={showPassword ? 'eye-off' : 'eye'}
+                onPress={() => setShowPassword(!showPassword)}
               />
-              <HelperText type="error" visible={!!errors.password}>
-                {errors.password}
-              </HelperText>
-            </>
-          )}
+            }
+          />
+          <HelperText type="error" visible={!!errors.password}>
+            {errors.password}
+          </HelperText>
 
           <Button
             mode="contained"
-            onPress={useOtp ? handleOtpLogin : handlePasswordLogin}
+            onPress={handleLogin}
             loading={loading}
             disabled={loading}
             style={styles.loginButton}
             contentStyle={styles.buttonContent}
           >
-            {useOtp ? "Send OTP" : "Sign In"}
-          </Button>
-
-          <Button
-            mode="text"
-            onPress={() => setUseOtp(!useOtp)}
-            style={styles.switchButton}
-          >
-            {useOtp ? "Use Password Instead" : "Use OTP Instead"}
+            Sign In
           </Button>
 
           <Button
@@ -213,9 +176,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 16,
     borderRadius: 12,
-  },
-  switchButton: {
-    marginBottom: 8,
   },
   forgotButton: {
     marginBottom: 16,

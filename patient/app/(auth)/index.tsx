@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { Text, TextInput, Button, HelperText } from 'react-native-paper';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import Toast from 'react-native-toast-message';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 import { theme } from '@/src/constants/theme';
 import { authAPI } from '@/src/services/api';
@@ -84,92 +85,106 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Header title="Sign Up" showBack />
-      
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.delay(200).duration(600)}>
-          <Text variant="headlineSmall" style={styles.title}>
-            Create Account
-          </Text>
-          <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
-            Join MediMap to find medicines easily
-          </Text>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.form}>
-          <TextInput
-            label="Full Name *"
-            value={formData.name}
-            onChangeText={(value) => updateFormData('name', value)}
-            placeholder="Enter your full name"
-            mode="outlined"
-            error={!!errors.name}
-            style={styles.input}
-          />
-          <HelperText type="error" visible={!!errors.name}>
-            {errors.name}
-          </HelperText>
-
-          <TextInput
-            label="Phone Number *"
-            value={formData.phone}
-            onChangeText={(value) => updateFormData('phone', value)}
-            placeholder="Enter your phone number"
-            keyboardType="phone-pad"
-            mode="outlined"
-            error={!!errors.phone}
-            style={styles.input}
-          />
-          <HelperText type="error" visible={!!errors.phone}>
-            {errors.phone}
-          </HelperText>
-
-          <TextInput
-            label="Email *"
-            value={formData.email}
-            onChangeText={(value) => updateFormData('email', value)}
-            placeholder="Enter your email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            mode="outlined"
-            style={styles.input}
-          />
-
-          <TextInput
-            label="Location *"
-            value={formData.location}
-            onChangeText={(value) => updateFormData('location', value)}
-            placeholder="Enter your city/town"
-            mode="outlined"
-            style={styles.input}
-          />
-
-          <Button
-            mode="contained"
-            onPress={handleRegister}
-            loading={loading}
-            disabled={loading}
-            style={styles.continueButton}
-            contentStyle={styles.buttonContent}
-          >
-            Continue
-          </Button>
-        </Animated.View>
-
-        <Animated.View entering={FadeInDown.delay(600).duration(600)} style={styles.footer}>
-          <Text variant="bodyMedium" style={[styles.footerText, { color: theme.colors.onSurfaceVariant }]}>
-            Already have an account?{' '}
-            <Text 
-              style={{ color: theme.colors.primary, fontWeight: '600' }}
-              onPress={() => router.push('/(auth)/login')}
-            >
-              Sign In
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Header title="Sign Up" showBack />
+        
+        <KeyboardAwareScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          enableOnAndroid={true}
+          extraScrollHeight={20}
+          enableAutomaticScroll={true}
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+            <Text variant="headlineSmall" style={styles.title}>
+              Create Account
             </Text>
-          </Text>
-        </Animated.View>
-      </ScrollView>
-    </View>
+            <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
+              Join MediMap to find medicines easily
+            </Text>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.form}>
+            <TextInput
+              label="Full Name *"
+              value={formData.name}
+              onChangeText={(value) => updateFormData('name', value)}
+              placeholder="Enter your full name"
+              mode="outlined"
+              error={!!errors.name}
+              style={styles.input}
+              returnKeyType="next"
+            />
+            <HelperText type="error" visible={!!errors.name}>
+              {errors.name}
+            </HelperText>
+
+            <TextInput
+              label="Phone Number *"
+              value={formData.phone}
+              onChangeText={(value) => updateFormData('phone', value)}
+              placeholder="Enter your phone number"
+              keyboardType="phone-pad"
+              mode="outlined"
+              error={!!errors.phone}
+              style={styles.input}
+              returnKeyType="next"
+            />
+            <HelperText type="error" visible={!!errors.phone}>
+              {errors.phone}
+            </HelperText>
+
+            <TextInput
+              label="Email *"
+              value={formData.email}
+              onChangeText={(value) => updateFormData('email', value)}
+              placeholder="Enter your email"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              mode="outlined"
+              style={styles.input}
+              returnKeyType="next"
+            />
+
+            <TextInput
+              label="Location *"
+              value={formData.location}
+              onChangeText={(value) => updateFormData('location', value)}
+              placeholder="Enter your city/town"
+              mode="outlined"
+              style={styles.input}
+              returnKeyType="done"
+            />
+
+            <Button
+              mode="contained"
+              onPress={handleRegister}
+              loading={loading}
+              disabled={loading}
+              style={styles.continueButton}
+              contentStyle={styles.buttonContent}
+            >
+              Continue
+            </Button>
+          </Animated.View>
+
+          <Animated.View entering={FadeInDown.delay(600).duration(600)} style={styles.footer}>
+            <Text variant="bodyMedium" style={[styles.footerText, { color: theme.colors.onSurfaceVariant }]}>
+              Already have an account?{' '}
+              <Text 
+                style={{ color: theme.colors.primary, fontWeight: '600' }}
+                onPress={() => router.push('/(auth)/login')}
+              >
+                Sign In
+              </Text>
+            </Text>
+          </Animated.View>
+        </KeyboardAwareScrollView>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -179,7 +194,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 24,
+    paddingBottom: 40, // Extra padding for keyboard
   },
   title: {
     fontWeight: 'bold',
