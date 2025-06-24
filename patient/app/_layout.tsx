@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Toast from 'react-native-toast-message';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { theme } from '@/src/constants/theme';
 import { useAuthStore } from '@/src/store/authStore';
@@ -32,7 +33,6 @@ export default function RootLayout() {
       } catch (e) {
         console.warn(e);
       } finally {
-        // Hide splash screen
         await SplashScreen.hideAsync();
       }
     }
@@ -43,12 +43,14 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PaperProvider theme={theme}>
-        <StatusBar style="auto" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-        </Stack>
-        <Toast />
+        <StatusBar style="dark" />
+        <SafeAreaView style={{ flex: 1 }}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+          <Toast />
+        </SafeAreaView>
       </PaperProvider>
     </GestureHandlerRootView>
   );
