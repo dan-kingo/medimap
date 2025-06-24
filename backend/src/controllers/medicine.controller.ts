@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import Medicine from '../models/medicine.js';
 import Pharmacy from '../models/pharmacy.js';
 import { createNotification } from '../utils/notification.js';
-
+import asyncHandler from 'express-async-handler';
 export const searchMedicines = async (req: Request, res: Response) => {
   const { query, latitude, longitude, delivery, sort } = req.query as {
     query?: string;
@@ -119,7 +119,8 @@ export const getPopularMedicines = async (_req: Request, res: Response) => {
           strength: 1,
           type: 1,
           unit: 1,
-          quantity: 1
+          quantity: 1,
+          price: 1,
         }
       }
     ]);
@@ -130,6 +131,22 @@ export const getPopularMedicines = async (_req: Request, res: Response) => {
     return res.status(500).json({ message: 'Failed to fetch popular medicines' });
   }
 };
+
+export const getMedicinesByPharmacy = asyncHandler(async (req: Request, res: Response) => {
+  const { pharmacyId } = req.params;
+
+  const medicines = await Medicine.find({ pharmacy: pharmacyId })
+    .populate('pharmacy', 'name city deliveryAvailable rating description location _id')
+    .sort({ name: 1 });
+
+  if (!medicines || medicines.length === 0) {
+    res.status(404);
+    throw new Error('No medicines found for this pharmacy');
+  }
+
+  res.status(200).json(medicines);
+});
+
 
 export const getMedicineDetails = async (req: Request, res: Response) => {
   const { id } = req.params;

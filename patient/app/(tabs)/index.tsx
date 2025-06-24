@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
-import { Text, Card, Chip, FAB, Searchbar } from 'react-native-paper';
+import { Text, Card, Chip, FAB, Searchbar, Button } from 'react-native-paper';
 import { router } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,7 +16,7 @@ import { Medicine, Pharmacy } from '@/src/types';
 
 export default function HomeScreen() {
   const { user } = useAuthStore();
-  const { getTotalItems } = useCartStore();
+  const { getTotalItems, addToCart } = useCartStore();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [popularMedicines, setPopularMedicines] = useState<Medicine[]>([]);
@@ -70,7 +70,7 @@ export default function HomeScreen() {
   const fetchPopularMedicines = async () => {
     try {
       const response = await medicineAPI.getPopularMedicines();
-      setPopularMedicines(response.data.slice(0, 5));
+      setPopularMedicines(response.data);
     } catch (error) {
       console.error('Error fetching popular medicines:', error);
       Toast.show({
@@ -90,7 +90,7 @@ export default function HomeScreen() {
     try {
       setLoading(true);
       const response = await homeAPI.getNearbyPharmacies(location.latitude, location.longitude);
-      setNearbyPharmacies(response.data.pharmacies.slice(0, 5));
+      setNearbyPharmacies(response.data.pharmacies);
       setLocationError(null);
     } catch (error: any) {
       console.error('Error fetching nearby pharmacies:', error);
@@ -117,11 +117,36 @@ export default function HomeScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([
-      fetchPopularMedicines(),
-      getCurrentLocation(), // Refresh location as well
-    ]);
-    setRefreshing(false);
+    try {
+      await Promise.all([
+        fetchPopularMedicines(),
+        getCurrentLocation(),
+        fetchNearbyPharmacies(),
+      ]);
+    } catch (error) {
+      console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleAddToCart = (medicine: Medicine, pharmacy: Pharmacy) => {
+    addToCart(medicine, pharmacy);
+    Toast.show({
+      type: 'success',
+      text1: 'Added to cart',
+      text2: `${medicine.name} has been added to your cart`,
+    });
+  };
+
+  const handlePharmacyPress = (pharmacy: Pharmacy) => {
+    router.push({
+      pathname: '/pharmacy-medicines',
+      params: { 
+        pharmacyId: pharmacy._id,
+        pharmacyName: pharmacy.name 
+      },
+    });
   };
 
   const cartItemCount = getTotalItems();
@@ -187,18 +212,9 @@ export default function HomeScreen() {
 
         {/* Popular Medicines */}
         <Animated.View entering={FadeInDown.delay(600).duration(600)} style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text variant="titleMedium" style={styles.sectionTitle}>
-              Popular Medicines
-            </Text>
-            <Text 
-              variant="bodyMedium" 
-              style={[styles.seeAll, { color: theme.colors.primary }]}
-              onPress={() => router.push('/search')}
-            >
-              See All
-            </Text>
-          </View>
+          <Text variant="titleMedium" style={styles.sectionTitle}>
+            Popular Medicines
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {popularMedicines.map((medicine) => (
               <Card key={medicine._id} style={styles.medicineCard}>
@@ -210,13 +226,21 @@ export default function HomeScreen() {
                     {medicine.type} • {medicine.strength}
                   </Text>
                   <Text variant="titleMedium" style={styles.medicinePrice}>
-                    ${medicine.price}
+                    ${medicine.price.toFixed(2)}
                   </Text>
                   {medicine.requiresPrescription && (
                     <Chip mode="outlined" compact style={styles.prescriptionChip}>
                       Prescription Required
                     </Chip>
                   )}
+                  <Button 
+                    mode="contained" 
+                    onPress={() => handleAddToCart(medicine, medicine.pharmacy)}
+                    style={styles.addToCartButton}
+                    labelStyle={styles.addToCartButtonLabel}
+                  >
+                    Add to Cart
+                  </Button>
                 </Card.Content>
               </Card>
             ))}
@@ -229,13 +253,13 @@ export default function HomeScreen() {
             <Text variant="titleMedium" style={styles.sectionTitle}>
               Nearby Pharmacies
             </Text>
-            <Text 
-              variant="bodyMedium" 
-              style={[styles.seeAll, { color: theme.colors.primary }]}
-              onPress={getCurrentLocation}
+            <Button 
+              mode="text" 
+              onPress={handleRefresh}
+              textColor={theme.colors.primary}
             >
               Refresh
-            </Text>
+            </Button>
           </View>
           
           {loading ? (
@@ -257,7 +281,11 @@ export default function HomeScreen() {
             </View>
           ) : nearbyPharmacies.length > 0 ? (
             nearbyPharmacies.map((pharmacy) => (
-              <Card key={pharmacy._id} style={styles.pharmacyCard}>
+              <Card 
+                key={pharmacy._id} 
+                style={styles.pharmacyCard}
+                onPress={() => handlePharmacyPress(pharmacy)}
+              >
                 <Card.Content>
                   <View style={styles.pharmacyHeader}>
                     <Text variant="titleSmall">{pharmacy.name}</Text>
@@ -304,7 +332,7 @@ export default function HomeScreen() {
         <FAB
           icon="cart"
           label={cartItemCount.toString()}
-          onPress={() => router.push('/cart')}
+          onPress={() => router.push('/checkout')}
           style={[styles.fab, { backgroundColor: theme.colors.primary }]}
         />
       )}
@@ -363,7 +391,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   medicineCard: {
-    width: 160,
+    width: 180,
     marginRight: 12,
     marginBottom: 8,
     borderRadius: 12,
@@ -375,10 +403,18 @@ const styles = StyleSheet.create({
   medicinePrice: {
     marginTop: 8,
     fontWeight: '600',
+    marginBottom: 8,
   },
   prescriptionChip: {
     marginTop: 8,
     alignSelf: 'flex-start',
+    marginBottom: 8,
+  },
+  addToCartButton: {
+    marginTop: 8,
+  },
+  addToCartButtonLabel: {
+    fontSize: 12,
   },
   pharmacyCard: {
     marginBottom: 12,

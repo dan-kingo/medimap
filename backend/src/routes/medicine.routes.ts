@@ -1,6 +1,6 @@
 // routes/medicine.routes.ts
 import express from 'express';
-import { addMedicine, deleteMedicine, getMedicineDetails, getMedicines, getPopularMedicines, markOutOfStock, searchMedicines, updateMedicine } from '../controllers/medicine.controller.js';
+import { addMedicine, deleteMedicine, getMedicineDetails, getMedicines, getMedicinesByPharmacy, getPopularMedicines, markOutOfStock, searchMedicines, updateMedicine } from '../controllers/medicine.controller.js';
 import validate from '../middlewares/validationMiddleware.js';
 import { medicineDetailsParamsSchema, medicineSchema, searchMedicinesQuerySchema } from '../validations/medicine.schema.js';
 import { authenticateUser } from '../middlewares/authMiddleware.js';
@@ -9,6 +9,7 @@ const router = express.Router();
 
 router.get('/search', validate(searchMedicinesQuerySchema), searchMedicines);
 router.get('/popular', getPopularMedicines);
+router.get('/:pharmacyId', authenticateUser, getMedicinesByPharmacy);
 router.get('/:id', validate(medicineDetailsParamsSchema), getMedicineDetails); // Assuming this is for getting details of a specific medicine
 router.get('/', authenticateUser, getMedicines);
 router.post('/', authenticateUser, validate(medicineSchema), addMedicine);

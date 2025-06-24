@@ -120,9 +120,11 @@ export const medicineAPI = {
 
   getPopularMedicines: () => api.get('/medicines/popular'),
 
+ getMedicinesByPharmacy: (pharmacyId: string) => api.get(`/medicines/${pharmacyId}`),
+
   getMedicineDetails: (id: string) => api.get(`/medicines/${id}`),
 };
-
+ 
 // Home API
 export const homeAPI = {
   getNearbyPharmacies: (latitude: number, longitude: number) =>

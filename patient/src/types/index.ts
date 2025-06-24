@@ -27,14 +27,15 @@ export interface Medicine {
   price: number;
   requiresPrescription: boolean;
   pharmacy: Pharmacy;
+  description?: string;
   available: boolean;
 }
 
 export interface Pharmacy {
   _id: string;
   name: string;
-  city: string;
-  deliveryAvailable: boolean;
+  city?: string;
+  deliveryAvailable?: boolean;
   rating?: number;
   distance?: number;
   phone?: string;
