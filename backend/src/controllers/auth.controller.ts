@@ -22,8 +22,9 @@ export const requestOtp = async (req: Request, res: Response) => {
   try {
 
         const existingUser = await User.findOne({ phone });
-    if (existingUser) {
-      return res.status(409).json({ message: 'Phone number already registered' });
+    if (existingUser && existingUser.isVerified) {
+       res.status(409).json({ message: 'Phone number already registered' });
+       return
     }
 
     await sendOtpToUser({ phone, name, email, location });
@@ -34,12 +35,28 @@ export const requestOtp = async (req: Request, res: Response) => {
   }
 };
 
-export const verifyOtpAndLogin = async (req: Request, res: Response) => {
-  const { phone, otp } = req.body;
+export const verifyOtpAndSetPassword = async (req: Request, res: Response) => {
+  const { phone, otp, password } = req.body;
+  
   try {
+    // Verify OTP first
     const user = await verifyUserOtp(phone, otp);
+
+    // If password is provided (registration flow), set it
+    if (password) {
+      if (password.length < 8) {
+        throw new Error('Password must be at least 8 characters');
+      }
+      user.password = await bcrypt.hash(password, 10);
+      await user.save();
+    }
+
     const token = generateToken(user._id.toString(), user.role);
-    res.status(200).json({ message: 'Login successful', token, user });
+    res.status(200).json({ 
+      message: password ? 'Registration successful' : 'Login successful',
+      token, 
+      user 
+    });
   } catch (err: any) {
     res.status(400).json({ message: err.message });
   }

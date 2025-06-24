@@ -51,8 +51,8 @@ export const authAPI = {
     location?: string;
   }) => api.post('/auth/send-otp', data),
 
-  verifyOtp: (phone: string, otp: string) =>
-    api.post('/auth/verify-otp', { phone, otp }),
+  verifyOtp: (phone: string, otp: string, password?:string) =>
+    api.post('/auth/verify-otp', { phone, otp, password }),
 
   resendOtp: (phone: string) =>
     api.post('/auth/resend-otp', { phone }),

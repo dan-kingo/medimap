@@ -13,9 +13,11 @@ import Header from '@/src/components/Header';
 export default function OtpVerificationScreen() {
   const { login } = useAuthStore();
   const params = useLocalSearchParams();
-  const { phone, isRegistration, isLogin, userData } = params;
+  const { phone, isRegistration } = params;
   
   const [otp, setOtp] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [countdown, setCountdown] = useState(60);
@@ -41,19 +43,38 @@ export default function OtpVerificationScreen() {
       return;
     }
 
+    if (isRegistration === 'true' && (!password || password.length < 6)) {
+      setError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (isRegistration === 'true' && password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
     setLoading(true);
     try {
-      const response = await authAPI.verifyOtp(phone as string, otp);
+      const response = await authAPI.verifyOtp(
+        phone as string, 
+        otp,
+        isRegistration === 'true' ? password : undefined
+      );
+      
       const { token, user } = response.data;
       login(token, user);
+      
       Toast.show({
         type: 'success',
-        text1: 'Verification Successful',
-        text2: 'Welcome to MediMap!',
+        text1: isRegistration === 'true' ? 'Registration Complete' : 'Login Successful',
+        text2: isRegistration === 'true' 
+          ? 'Welcome to MediMap!' 
+          : 'Welcome back!',
       });
+      
       router.replace('/(tabs)');
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Invalid OTP');
+      setError(error.response?.data?.message || 'Verification failed');
     } finally {
       setLoading(false);
     }
@@ -62,17 +83,7 @@ export default function OtpVerificationScreen() {
   const handleResendOtp = async () => {
     setResendLoading(true);
     try {
-      if (isRegistration === 'true' && userData) {
-        const parsedUserData = JSON.parse(userData as string);
-        await authAPI.requestOtp({
-          phone: phone as string,
-          name: parsedUserData.name,
-          email: parsedUserData.email,
-          location: parsedUserData.location,
-        });
-      } else {
-        await authAPI.resendOtp(phone as string);
-      }
+      await authAPI.resendOtp(phone as string);
       setCountdown(60);
       Toast.show({
         type: 'success',
@@ -92,12 +103,12 @@ export default function OtpVerificationScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Header title="Verify OTP" showBack />
+      <Header title={isRegistration === 'true' ? "Complete Registration" : "Verify OTP"} showBack />
       
       <View style={styles.content}>
         <Animated.View entering={FadeInDown.delay(200).duration(600)}>
           <Text variant="headlineSmall" style={styles.title}>
-            Enter Verification Code
+            {isRegistration === 'true' ? 'Create Your Account' : 'Enter Verification Code'}
           </Text>
           <Text variant="bodyMedium" style={[styles.subtitle, { color: theme.colors.onSurfaceVariant }]}>
             We've sent a 6-digit code to {phone}
@@ -119,6 +130,31 @@ export default function OtpVerificationScreen() {
             style={styles.otpInput}
             maxLength={6}
           />
+
+          {isRegistration === 'true' && (
+            <>
+              <TextInput
+                label="Password"
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Enter at least 6 characters"
+                secureTextEntry
+                mode="outlined"
+                style={styles.passwordInput}
+              />
+              
+              <TextInput
+                label="Confirm Password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Re-enter your password"
+                secureTextEntry
+                mode="outlined"
+                style={styles.passwordInput}
+              />
+            </>
+          )}
+
           <HelperText type="error" visible={!!error}>
             {error}
           </HelperText>
@@ -131,7 +167,7 @@ export default function OtpVerificationScreen() {
             style={styles.verifyButton}
             contentStyle={styles.buttonContent}
           >
-            Verify
+            {isRegistration === 'true' ? 'Complete Registration' : 'Verify'}
           </Button>
 
           <View style={styles.resendContainer}>
@@ -183,6 +219,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     letterSpacing: 8,
     marginBottom: 8,
+  },
+  passwordInput: {
+    width: '100%',
+    marginTop: 16,
   },
   verifyButton: {
     marginTop: 24,
