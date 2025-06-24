@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Alert, FlatList } from 'react-native';
 import { Button, TextInput, Text, ActivityIndicator, Card, IconButton, Modal, Portal } from 'react-native-paper';
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import { profileAPI } from '@/src/services/api';
 import Header from '@/src/components/Header';
 
@@ -22,6 +23,7 @@ const ManageAddressesScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [currentAddress, setCurrentAddress] = useState<Address | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
   
   // Form state
   const [label, setLabel] = useState('');
@@ -102,8 +104,8 @@ const ManageAddressesScreen = () => {
       label,
       street,
       city,
-      ...(latitude && { latitude: parseFloat(latitude) }),
-      ...(longitude && { longitude: parseFloat(longitude) }),
+      ...(latitude && !isNaN(parseFloat(latitude)) && { latitude: parseFloat(latitude) }),
+      ...(longitude && !isNaN(parseFloat(longitude)) && { longitude: parseFloat(longitude) }),
     };
 
     try {
@@ -171,6 +173,42 @@ const ManageAddressesScreen = () => {
     setModalVisible(true);
   };
 
+  const getCurrentLocation = async () => {
+    try {
+      setLocationLoading(true);
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission denied', 'Location permission is required to get your current location');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLatitude(location.coords.latitude.toString());
+      setLongitude(location.coords.longitude.toString());
+      
+      // Optionally reverse geocode to get address details
+      const geocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (geocode.length > 0) {
+        const firstResult = geocode[0];
+        setStreet(
+          [firstResult.name, firstResult.street, firstResult.streetNumber]
+            .filter(Boolean)
+            .join(' ') || ''
+        );
+        setCity(firstResult.city || firstResult.region || '');
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Error', 'Failed to get current location');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
   const renderAddressItem = ({ item }: { item: Address }) => (
     <Card style={styles.addressCard}>
       <Card.Content>
@@ -179,11 +217,7 @@ const ManageAddressesScreen = () => {
             {item.label}
           </Text>
           <View style={styles.addressActions}>
-            <IconButton
-              icon="pencil"
-              size={20}
-              onPress={() => openEditModal(item)}
-            />
+          
             <IconButton
               icon="delete"
               size={20}
@@ -288,23 +322,36 @@ const ManageAddressesScreen = () => {
                 <Text style={styles.error}>{formErrors.city}</Text>
               ) : null}
 
-              <TextInput
-                label="Latitude (optional)"
-                value={latitude}
-                onChangeText={setLatitude}
-                mode="outlined"
-                style={styles.input}
-                keyboardType="numeric"
-              />
+              <View style={styles.locationContainer}>
+                <TextInput
+                  label="Latitude"
+                  value={latitude}
+                  onChangeText={setLatitude}
+                  mode="outlined"
+                  style={[styles.input, styles.locationInput]}
+                  keyboardType="numeric"
+                />
 
-              <TextInput
-                label="Longitude (optional)"
-                value={longitude}
-                onChangeText={setLongitude}
+                <TextInput
+                  label="Longitude"
+                  value={longitude}
+                  onChangeText={setLongitude}
+                  mode="outlined"
+                  style={[styles.input, styles.locationInput]}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <Button
                 mode="outlined"
-                style={styles.input}
-                keyboardType="numeric"
-              />
+                onPress={getCurrentLocation}
+                style={styles.locationButton}
+                icon="crosshairs-gps"
+                loading={locationLoading}
+                disabled={locationLoading}
+              >
+                Use Current Location
+              </Button>
 
               <View style={styles.modalButtons}>
                 <Button
@@ -386,6 +433,18 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: 8,
     backgroundColor: '#fff',
+  },
+  locationInput: {
+    flex: 1,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 8,
+  },
+  locationButton: {
+    marginBottom: 16,
   },
   error: {
     color: 'red',
