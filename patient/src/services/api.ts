@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { Address } from '../types';
 
 const API_BASE_URL = 'http://10.161.140.160:3000/api';
 
@@ -75,7 +76,10 @@ resetPassword: (phone: string, otp: string, newPassword: string) =>
 // Profile API
 export const profileAPI = {
   getProfile: () => api.get('/profile'),
-  
+  getAddresses: async (): Promise<{ addresses: Address[] }> => {
+    const response = await api.get('/profile/addresses');
+    return response.data;
+  },
   updateProfile: (data: {
     name?: string;
     email?: string;

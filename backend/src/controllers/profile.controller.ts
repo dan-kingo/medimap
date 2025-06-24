@@ -164,3 +164,12 @@ export const changePassword = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+export const getAddresses = async (req:Request, res:Response) => {
+  try {
+    const user = await User.findById(req.user?.userId).select('addresses');
+    res.json({ addresses: user?.addresses || [] });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching addresses' });
+  }
+};
