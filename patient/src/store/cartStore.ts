@@ -13,64 +13,79 @@ interface CartState {
   getTotalPrice: () => number;
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
-  items: [],
+export const useCartStore = create<CartState>((set, get) => {
+  // Initialize with empty array
+  const initialState = {
+    items: [] as CartItem[],
+  };
 
-  addToCart: (medicine, pharmacy, quantity = 1) => {
-    const { items } = get();
-    const existingItemIndex = items.findIndex(
-      item => item.medicine._id === medicine._id && item.pharmacy._id === pharmacy._id
-    );
+  return {
+    ...initialState,
 
-    if (existingItemIndex >= 0) {
-      // Update quantity if item already exists
-      const updatedItems = [...items];
-      updatedItems[existingItemIndex].quantity += quantity;
-      set({ items: updatedItems });
-    } else {
-      // Add new item
-      const newItem: CartItem = {
-        medicine,
-        pharmacy,
-        quantity,
-      };
-      set({ items: [...items, newItem] });
-    }
-  },
-
-  removeFromCart: (medicineId, pharmacyId) => {
-    const { items } = get();
-    const filteredItems = items.filter(
-      item => !(item.medicine._id === medicineId && item.pharmacy._id === pharmacyId)
-    );
-    set({ items: filteredItems });
-  },
-
-  updateQuantity: (medicineId, pharmacyId, quantity) => {
-    const { items } = get();
-    if (quantity <= 0) {
-      get().removeFromCart(medicineId, pharmacyId);
-      return;
-    }
-
-    const updatedItems = items.map(item => {
-      if (item.medicine._id === medicineId && item.pharmacy._id === pharmacyId) {
-        return { ...item, quantity };
+    addToCart: (medicine, pharmacy, quantity = 1) => {
+      // Validate inputs
+      if (!medicine || !medicine._id || !pharmacy || !pharmacy._id) {
+        console.error('Invalid medicine or pharmacy object', { medicine, pharmacy });
+        return;
       }
-      return item;
-    });
-    set({ items: updatedItems });
-  },
 
-  clearCart: () => set({ items: [] }),
+      const { items = [] } = get();
+      const existingItemIndex = items.findIndex(
+        item => item.medicine._id === medicine._id && item.pharmacy._id === pharmacy._id
+      );
 
-  getTotalItems: () => {
-    const { items } = get();
-    return items.reduce((total, item) => total + item.quantity, 0);
-  },
+      if (existingItemIndex >= 0) {
+        const updatedItems = [...items];
+        updatedItems[existingItemIndex].quantity += quantity;
+        set({ items: updatedItems });
+      } else {
+        const newItem: CartItem = {
+          medicine,
+          pharmacy,
+          quantity,
+        };
+        set({ items: [...items, newItem] });
+      }
+    },
 
-  getTotalPrice: () => {
-    const { items } = get();
-    return items.reduce((total, item) => total + (item.medicine.price * item.quantity), 0);
-  },
-}));
+    removeFromCart: (medicineId, pharmacyId) => {
+      const { items = [] } = get();
+      const filteredItems = items.filter(
+        item => !(item.medicine._id === medicineId && item.pharmacy._id === pharmacyId)
+      );
+      set({ items: filteredItems });
+    },
+
+    updateQuantity: (medicineId, pharmacyId, quantity) => {
+      const { items = [] } = get();
+      if (quantity <= 0) {
+        get().removeFromCart(medicineId, pharmacyId);
+        return;
+      }
+
+      const updatedItems = items.map(item => {
+        if (item.medicine._id === medicineId && item.pharmacy._id === pharmacyId) {
+          return { ...item, quantity };
+        }
+        return item;
+      });
+      set({ items: updatedItems });
+    },
+
+    clearCart: () => set({ items: [] }),
+
+    getTotalItems: () => {
+      const { items = [] } = get();
+      return items.reduce((total, item) => total + (item?.quantity || 0), 0);
+    },
+
+    getTotalPrice: () => {
+      const { items = [] } = get();
+      return items.reduce((total, item) => {
+        const price = item?.medicine?.price || 0;
+        const quantity = item?.quantity || 0;
+        return total + (price * quantity);
+      }, 0);
+    },
+  };
+});

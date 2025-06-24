@@ -10,9 +10,12 @@ import Header from '@/src/components/Header';
 import { useCartStore } from '@/src/store/cartStore';
 
 export default function CartScreen() {
-  const { items, updateQuantity, removeFromCart, clearCart, getTotalPrice } = useCartStore();
+  const { items = [], updateQuantity, removeFromCart, clearCart, getTotalPrice } = useCartStore();
   const [loading, setLoading] = useState(false);
 
+  // Safe items array in case of undefined
+  const safeItems = Array.isArray(items) ? items : [];
+  
   const handleQuantityChange = (medicineId: string, pharmacyId: string, newQuantity: number) => {
     if (newQuantity < 1) {
       Alert.alert(
@@ -29,7 +32,7 @@ export default function CartScreen() {
   };
 
   const handleProceedToCheckout = () => {
-    if (items.length === 0) return;
+    if (safeItems.length === 0) return;
     router.push('/checkout');
   };
 
@@ -46,18 +49,18 @@ export default function CartScreen() {
 
   const totalPrice = getTotalPrice();
 
-  if (items.length === 0) {
+  if (safeItems.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Header title="Shopping Cart" actions={[
-                  <MaterialCommunityIcons 
-                    key="notifications"
-                    name="bell-outline" 
-                    size={24} 
-                    color={theme.colors.onSurface}
-                    onPress={() => router.push('/notifications')}
-                  />
-                ]}/>
+          <MaterialCommunityIcons 
+            key="notifications"
+            name="bell-outline" 
+            size={24} 
+            color={theme.colors.onSurface}
+            onPress={() => router.push('/notifications')}
+          />
+        ]}/>
         <View style={styles.emptyState}>
           <MaterialCommunityIcons 
             name="cart-outline" 
@@ -96,65 +99,72 @@ export default function CartScreen() {
       />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {items.map((item, index) => (
-          <Animated.View key={`${item.medicine._id}-${item.pharmacy._id}`} entering={FadeInDown.delay(index * 100).duration(300)}>
-            <Card style={styles.cartItem}>
-              <Card.Content>
-                <View style={styles.itemHeader}>
-                  <View style={styles.itemInfo}>
-                    <Text variant="titleMedium" numberOfLines={2}>
-                      {item.medicine.name}
-                    </Text>
-                    <Text variant="bodySmall" style={styles.itemDetails}>
-                      {item.medicine.type} • {item.medicine.strength}
-                    </Text>
-                    <View style={styles.pharmacyInfo}>
-                      <MaterialCommunityIcons name="store" size={14} color={theme.colors.primary} />
-                      <Text variant="bodySmall" style={styles.pharmacyName}>
-                        {item.pharmacy.name}
-                      </Text>
-                    </View>
-                  </View>
-                  <IconButton
-                    icon="close"
-                    size={20}
-                    onPress={() => removeFromCart(item.medicine._id, item.pharmacy._id)}
-                  />
-                </View>
+        {safeItems.map((item, index) => {
+          // Skip invalid items
+          if (!item?.medicine || !item?.pharmacy) {
+            console.warn('Invalid cart item skipped:', item);
+            return null;
+          }
 
-                <View style={styles.itemFooter}>
-                  <View style={styles.quantityControls}>
+          return (
+            <Animated.View key={`${item.medicine._id}-${item.pharmacy._id}`} entering={FadeInDown.delay(index * 100).duration(300)}>
+              <Card style={styles.cartItem}>
+                <Card.Content>
+                  <View style={styles.itemHeader}>
+                    <View style={styles.itemInfo}>
+                      <Text variant="titleMedium" numberOfLines={2}>
+                        {item.medicine?.name || 'Unknown Medicine'}
+                      </Text>
+                      <Text variant="bodySmall" style={styles.itemDetails}>
+                        {item.medicine?.type || ''} • {item.medicine?.strength || ''}
+                      </Text>
+                      <View style={styles.pharmacyInfo}>
+                        <MaterialCommunityIcons name="store" size={14} color={theme.colors.primary} />
+                        <Text variant="bodySmall" style={styles.pharmacyName}>
+                          {item.pharmacy?.name || 'Unknown Pharmacy'}
+                        </Text>
+                      </View>
+                    </View>
                     <IconButton
-                      icon="minus"
+                      icon="close"
                       size={20}
-                      onPress={() => handleQuantityChange(item.medicine._id, item.pharmacy._id, item.quantity - 1)}
-                    />
-                    <Text variant="titleMedium" style={styles.quantity}>
-                      {item.quantity}
-                    </Text>
-                    <IconButton
-                      icon="plus"
-                      size={20}
-                      onPress={() => handleQuantityChange(item.medicine._id, item.pharmacy._id, item.quantity + 1)}
+                      onPress={() => removeFromCart(item.medicine._id, item.pharmacy._id)}
                     />
                   </View>
-                  <Text variant="titleMedium" style={styles.itemPrice}>
-                    ${(item.medicine.price * item.quantity).toFixed(2)}
-                  </Text>
-                </View>
-              </Card.Content>
-            </Card>
-          </Animated.View>
-        ))}
+
+                  <View style={styles.itemFooter}>
+                    <View style={styles.quantityControls}>
+                      <IconButton
+                        icon="minus"
+                        size={20}
+                        onPress={() => handleQuantityChange(item.medicine._id, item.pharmacy._id, item.quantity - 1)}
+                      />
+                      <Text variant="titleMedium" style={styles.quantity}>
+                        {item.quantity}
+                      </Text>
+                      <IconButton
+                        icon="plus"
+                        size={20}
+                        onPress={() => handleQuantityChange(item.medicine._id, item.pharmacy._id, item.quantity + 1)}
+                      />
+                    </View>
+                    <Text variant="titleMedium" style={styles.itemPrice}>
+                      ${((item.medicine?.price || 0) * item.quantity).toFixed(2)}
+                    </Text>
+                  </View>
+                </Card.Content>
+              </Card>
+            </Animated.View>
+          );
+        })}
       </ScrollView>
 
-      {/* Cart Summary */}
       <Animated.View entering={FadeInDown.delay(500).duration(300)} style={styles.summary}>
         <Card style={styles.summaryCard}>
           <Card.Content>
             <View style={styles.summaryRow}>
               <Text variant="titleMedium">Total Items:</Text>
-              <Text variant="titleMedium">{items.reduce((sum, item) => sum + item.quantity, 0)}</Text>
+              <Text variant="titleMedium">{safeItems.reduce((sum, item) => sum + (item?.quantity || 0), 0)}</Text>
             </View>
             <Divider style={styles.divider} />
             <View style={styles.summaryRow}>
@@ -179,6 +189,7 @@ export default function CartScreen() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

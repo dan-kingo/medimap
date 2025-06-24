@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
-import { Text, Card, Chip, FAB, Searchbar, Button } from 'react-native-paper';
+import { Text, Card, Chip, FAB, Button } from 'react-native-paper';
 import { router } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -16,9 +16,8 @@ import { Medicine, Pharmacy } from '@/src/types';
 
 export default function HomeScreen() {
   const { user } = useAuthStore();
-  const { getTotalItems, addToCart } = useCartStore();
+  const { getTotalItems } = useCartStore();
   
-  const [searchQuery, setSearchQuery] = useState('');
   const [popularMedicines, setPopularMedicines] = useState<Medicine[]>([]);
   const [nearbyPharmacies, setNearbyPharmacies] = useState<Pharmacy[]>([]);
   const [loading, setLoading] = useState(false);
@@ -26,7 +25,7 @@ export default function HomeScreen() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
 
-  useEffect(() => {
+  useEffect(()  => {
     getCurrentLocation();
     fetchPopularMedicines();
   }, []);
@@ -106,15 +105,6 @@ export default function HomeScreen() {
     }
   };
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      router.push({
-        pathname: '/search-results',
-        params: { query: searchQuery.trim() },
-      });
-    }
-  };
-
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -128,15 +118,6 @@ export default function HomeScreen() {
     } finally {
       setRefreshing(false);
     }
-  };
-
-  const handleAddToCart = (medicine: Medicine, pharmacy: Pharmacy) => {
-    addToCart(medicine, pharmacy);
-    Toast.show({
-      type: 'success',
-      text1: 'Added to cart',
-      text2: `${medicine.name} has been added to your cart`,
-    });
   };
 
   const handlePharmacyPress = (pharmacy: Pharmacy) => {
@@ -174,17 +155,6 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
-        {/* Search Section */}
-        <Animated.View entering={FadeInDown.delay(200).duration(600)} style={styles.searchSection}>
-          <Searchbar
-            placeholder="Search for medicines..."
-            onChangeText={setSearchQuery}
-            value={searchQuery}
-            onSubmitEditing={handleSearch}
-            style={styles.searchBar}
-          />
-        </Animated.View>
-
         {/* Quick Actions */}
         <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.quickActions}>
           <Text variant="titleMedium" style={styles.sectionTitle}>
@@ -233,14 +203,6 @@ export default function HomeScreen() {
                       Prescription Required
                     </Chip>
                   )}
-                  <Button 
-                    mode="contained" 
-                    onPress={() => handleAddToCart(medicine, medicine.pharmacy)}
-                    style={styles.addToCartButton}
-                    labelStyle={styles.addToCartButtonLabel}
-                  >
-                    Add to Cart
-                  </Button>
                 </Card.Content>
               </Card>
             ))}
@@ -348,14 +310,9 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
   },
-  searchSection: {
-    marginVertical: 16,
-  },
-  searchBar: {
-    borderRadius: 12,
-  },
   quickActions: {
     marginBottom: 24,
+    marginTop: 8,
   },
   actionButtons: {
     flexDirection: 'row',
@@ -386,6 +343,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: '600',
+    marginTop: 28,
   },
   seeAll: {
     fontWeight: '500',
@@ -409,12 +367,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     alignSelf: 'flex-start',
     marginBottom: 8,
-  },
-  addToCartButton: {
-    marginTop: 8,
-  },
-  addToCartButtonLabel: {
-    fontSize: 12,
   },
   pharmacyCard: {
     marginBottom: 12,

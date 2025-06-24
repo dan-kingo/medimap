@@ -121,6 +121,14 @@ export const getPopularMedicines = async (_req: Request, res: Response) => {
           unit: 1,
           quantity: 1,
           price: 1,
+          pharmacy: {
+            _id: 1,
+            name: 1,
+            city: 1,
+            deliveryAvailable: 1,
+            rating: 1,
+            location: 1
+          }
         }
       }
     ]);
