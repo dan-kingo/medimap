@@ -1,10 +1,10 @@
 import Header from '@/src/components/Header';
-import api from '@/src/services/api';
+import { notificationAPI } from '@/src/services/api';
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 
 interface Notification {
-  id: string;
+  _id: string;
   title: string;
   message: string;
   isRead: boolean;
@@ -24,7 +24,7 @@ export default function NotificationsScreen() {
 
   const fetchNotifications = async () => {
     try {
-      const response = await api.get('/notifications');
+      const response = await notificationAPI.getNotifications();
       setNotifications(response.data);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -36,8 +36,9 @@ export default function NotificationsScreen() {
 
   const fetchUnreadCount = async () => {
     try {
-      const response = await api.get('/notifications/unread/count');
+      const response = await notificationAPI.getUnreadCount();
       setUnreadCount(response.data.count);
+      console.log('Unread count:', response.data.count);
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
@@ -45,13 +46,15 @@ export default function NotificationsScreen() {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await api.patch(`/notifications/${id}/read`);
+      await notificationAPI.markAsRead(id);
       // Update local state
-      setNotifications(notifications.map(notification => 
-        notification.id === id ? { ...notification, isRead: true } : notification
-      ));
-      // Refresh unread count
-      fetchUnreadCount();
+      setNotifications(prevNotifications => 
+        prevNotifications.map(notification => 
+          notification._id === id ? { ...notification, isRead: true } : notification
+        )
+      );
+      // Update unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -59,13 +62,15 @@ export default function NotificationsScreen() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await api.get('/notifications/all');
-      // Update local state
-      setNotifications(notifications.map(notification => 
-        ({ ...notification, isRead: true })
-      ));
-      // Refresh unread count
-      fetchUnreadCount();
+      await notificationAPI.markAllAsRead();
+      // Update all notifications to read
+      setNotifications(prevNotifications => 
+        prevNotifications.map(notification => 
+          ({ ...notification, isRead: true })
+        )
+      );
+      // Reset unread count
+      setUnreadCount(0);
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
@@ -80,16 +85,16 @@ export default function NotificationsScreen() {
   const renderNotificationItem = ({ item }: { item: Notification }) => (
     <TouchableOpacity 
       style={[styles.notificationItem, !item.isRead && styles.unreadNotification]}
-      onPress={() => handleMarkAsRead(item.id)}
+      onPress={() => !item.isRead && handleMarkAsRead(item._id)}
     >
-      <Text style={styles.notificationTitle}>{item.title}</Text>
-      <Text style={styles.notificationMessage}>{item.message}</Text>
-      <Text style={styles.notificationDate}>
-        {new Date(item.createdAt).toLocaleString()}
-      </Text>
-      {!item.isRead && (
-        <Text style={styles.unreadBadge}>New</Text>
-      )}
+      <View style={styles.notificationContent}>
+        <Text style={styles.notificationTitle}>{item.title}</Text>
+        <Text style={styles.notificationMessage}>{item.message}</Text>
+        <Text style={styles.notificationDate}>
+          {new Date(item.createdAt).toLocaleString()}
+        </Text>
+      </View>
+      {!item.isRead && <View style={styles.unreadDot} />}
     </TouchableOpacity>
   );
 
@@ -103,36 +108,39 @@ export default function NotificationsScreen() {
 
   return (
     <>
-    <Header title="Notifications" showBack/>
-    <View style={styles.container}>
-      <View style={styles.header}>
+      <Header title="Notifications" showBack />
+      <View style={styles.container}>
+        <View style={styles.header}>
+          
+            <TouchableOpacity 
+              onPress={handleMarkAllAsRead}
+              style={styles.markAllButton}
+            >
+              <Text style={styles.markAllText}>Mark all as read</Text>
+            </TouchableOpacity>
+        
+        </View>
+
+        <FlatList
+          data={notifications}
+          renderItem={renderNotificationItem}
+          keyExtractor={(item) => item._id}
+          contentContainerStyle={styles.listContent}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
+          ListEmptyComponent={
+            <View style={styles.center}>
+              <Text>No notifications found</Text>
+            </View>
+          }
+        />
+
         {unreadCount > 0 && (
-          <TouchableOpacity onPress={handleMarkAllAsRead}>
-            <Text style={styles.markAllText}>Mark all as read</Text>
-          </TouchableOpacity>
+          <View style={styles.unreadCountBadge}>
+            <Text style={styles.unreadCountText}>{unreadCount} unread</Text>
+          </View>
         )}
       </View>
-
-      <FlatList
-        data={notifications}
-        renderItem={renderNotificationItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-        ListEmptyComponent={
-          <View style={styles.center}>
-            <Text>No notifications found</Text>
-          </View>
-        }
-      />
-
-      {unreadCount > 0 && (
-        <View style={styles.unreadCountBadge}>
-          <Text style={styles.unreadCountText}>{unreadCount} unread</Text>
-        </View>
-      )}
-    </View>
     </>
   );
 }
@@ -161,9 +169,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  markAllButton: {
+    padding: 5,
+  },
   markAllText: {
     color: '#1a73e8',
     fontSize: 14,
+    fontWeight: '500',
   },
   listContent: {
     paddingBottom: 20,
@@ -174,7 +186,11 @@ const styles = StyleSheet.create({
     marginBottom: 1,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  notificationContent: {
+    flex: 1,
   },
   unreadNotification: {
     backgroundColor: '#f0f7ff',
@@ -193,17 +209,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
   },
-  unreadBadge: {
-    position: 'absolute',
-    top: 15,
-    right: 15,
+  unreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#1a73e8',
-    color: 'white',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 10,
-    fontSize: 12,
-    overflow: 'hidden',
+    marginLeft: 10,
   },
   unreadCountBadge: {
     position: 'absolute',
@@ -219,3 +230,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+

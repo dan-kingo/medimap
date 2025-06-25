@@ -5,9 +5,9 @@ import { getMyNotifications, getUnreadCount, markAllAsRead, markAsRead } from '.
 
 const router = express.Router();
 
+router.get('/unread/count', authenticateUser, getUnreadCount);
 router.get('/', authenticateUser, getMyNotifications);
 router.get('/all', authenticateUser, markAllAsRead); // Assuming this is for all notifications
 router.patch('/:id/read', authenticateUser, markAsRead);
-router.get('/unread/count', authenticateUser, getUnreadCount);
 
 export default router;
