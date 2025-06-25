@@ -33,7 +33,10 @@ export default function RegisterScreen() {
 
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
     }
+    
     if (!formData.location.trim()) {
       newErrors.location = 'Location is required';
     }
@@ -147,7 +150,11 @@ export default function RegisterScreen() {
               mode="outlined"
               style={styles.input}
               returnKeyType="next"
+              error={!!errors.email}
             />
+            <HelperText type="error" visible={!!errors.email}>
+              {errors.email}
+            </HelperText>
 
             <TextInput
               label="Location *"
@@ -157,7 +164,11 @@ export default function RegisterScreen() {
               mode="outlined"
               style={styles.input}
               returnKeyType="done"
+              error={!!errors.location}
             />
+            <HelperText type="error" visible={!!errors.location}>
+              {errors.location}
+            </HelperText>
 
             <Button
               mode="contained"

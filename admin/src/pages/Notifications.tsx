@@ -1,6 +1,15 @@
 import React, { useState } from 'react'
-import { Send, Bell, Users, Building2, AlertTriangle } from 'lucide-react'
+import { Send, Bell, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  target: string;
+  timestamp: Date;
+}
 
 const Notifications: React.FC = () => {
   const [notificationData, setNotificationData] = useState({
@@ -10,6 +19,24 @@ const Notifications: React.FC = () => {
     target: 'all', // all, users, pharmacies
   })
   const [sending, setSending] = useState(false)
+  const [recentNotifications, setRecentNotifications] = useState<Notification[]>([
+    {
+      id: '1',
+      title: 'System Maintenance Scheduled',
+      message: 'The system will be under maintenance on Sunday from 2:00 AM to 4:00 AM.',
+      type: 'warning',
+      target: 'all',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000) // 2 hours ago
+    },
+    {
+      id: '2',
+      title: 'New Feature: Order Tracking',
+      message: 'We\'ve added real-time order tracking for all your prescriptions.',
+      type: 'success',
+      target: 'all',
+      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000) // 1 day ago
+    }
+  ])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -18,7 +45,21 @@ const Notifications: React.FC = () => {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Add new notification to recent notifications
+      const newNotification: Notification = {
+        id: Math.random().toString(36).substring(2, 9),
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        target: notificationData.target,
+        timestamp: new Date()
+      }
+      
+      setRecentNotifications(prev => [newNotification, ...prev])
       toast.success('Notification sent successfully!')
+      
+      // Reset form
       setNotificationData({
         title: '',
         message: '',
@@ -54,6 +95,27 @@ const Notifications: React.FC = () => {
       case 'error': return 'text-error-600 bg-error-100'
       default: return 'text-primary-600 bg-primary-100'
     }
+  }
+
+  const formatTimeAgo = (date: Date) => {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
+    
+    let interval = Math.floor(seconds / 31536000)
+    if (interval >= 1) return `${interval} year${interval === 1 ? '' : 's'} ago`
+    
+    interval = Math.floor(seconds / 2592000)
+    if (interval >= 1) return `${interval} month${interval === 1 ? '' : 's'} ago`
+    
+    interval = Math.floor(seconds / 86400)
+    if (interval >= 1) return `${interval} day${interval === 1 ? '' : 's'} ago`
+    
+    interval = Math.floor(seconds / 3600)
+    if (interval >= 1) return `${interval} hour${interval === 1 ? '' : 's'} ago`
+    
+    interval = Math.floor(seconds / 60)
+    if (interval >= 1) return `${interval} minute${interval === 1 ? '' : 's'} ago`
+    
+    return `${Math.floor(seconds)} second${seconds === 1 ? '' : 's'} ago`
   }
 
   return (
@@ -196,29 +258,6 @@ const Notifications: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="card">
-        <div className="card-header">
-          <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
-        </div>
-        <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="btn-secondary justify-start">
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              Medicine Recall Alert
-            </button>
-            <button className="btn-secondary justify-start">
-              <Bell className="h-4 w-4 mr-2" />
-              System Maintenance
-            </button>
-            <button className="btn-secondary justify-start">
-              <Users className="h-4 w-4 mr-2" />
-              New Feature Announcement
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Recent Notifications */}
       <div className="card">
         <div className="card-header">
@@ -226,27 +265,24 @@ const Notifications: React.FC = () => {
         </div>
         <div className="card-body">
           <div className="space-y-4">
-            <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className="p-2 rounded-full bg-warning-100 text-warning-600">
-                <AlertTriangle className="h-4 w-4" />
+            {recentNotifications.map(notification => (
+              <div key={notification.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                <div className={`p-2 rounded-full ${getTypeColor(notification.type)}`}>
+                  {React.createElement(getTypeIcon(notification.type), { className: 'h-4 w-4' })}
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-gray-900">{notification.title}</h4>
+                  <p className="text-sm text-gray-600">{notification.message}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formatTimeAgo(notification.timestamp)} • {
+                      notification.target === 'all' ? 'All Users' :
+                      notification.target === 'users' ? 'Patients Only' :
+                      'Pharmacies Only'
+                    }
+                  </p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-gray-900">System Maintenance Scheduled</h4>
-                <p className="text-sm text-gray-600">The system will be under maintenance on Sunday...</p>
-                <p className="text-xs text-gray-500 mt-1">2 hours ago • All Users</p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-              <div className="p-2 rounded-full bg-success-100 text-success-600">
-                <Bell className="h-4 w-4" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-gray-900">New Feature: Order Tracking</h4>
-                <p className="text-sm text-gray-600">We've added real-time order tracking...</p>
-                <p className="text-xs text-gray-500 mt-1">1 day ago • All Users</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>

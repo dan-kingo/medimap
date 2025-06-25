@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Search, Filter, Eye, Calendar, User, Building2 } from 'lucide-react'
+import { Search, Calendar, User } from 'lucide-react'
 import { adminAPI } from '../services/api'
 import toast from 'react-hot-toast'
 
@@ -25,14 +25,12 @@ const Orders: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
-  const [dateFilter, setDateFilter] = useState('')
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         const params: any = {}
         if (statusFilter) params.status = statusFilter
-        if (dateFilter) params.startDate = dateFilter
         
         const response = await adminAPI.getOrders(params)
         setOrders(response.data)
@@ -45,7 +43,7 @@ const Orders: React.FC = () => {
     }
 
     fetchOrders()
-  }, [statusFilter, dateFilter])
+  }, [statusFilter])
 
   const filteredOrders = orders.filter(order =>
     order.user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -59,6 +57,7 @@ const Orders: React.FC = () => {
       case 'accepted': return 'badge-primary'
       case 'delivered': return 'badge-success'
       case 'cancelled': return 'badge-error'
+      case 'out for delivery': return 'badge-info'
       default: return 'badge-gray'
     }
   }
@@ -85,7 +84,7 @@ const Orders: React.FC = () => {
       {/* Search and Filters */}
       <div className="card">
         <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -106,15 +105,10 @@ const Orders: React.FC = () => {
               <option value="">All Status</option>
               <option value="Placed">Placed</option>
               <option value="Accepted">Accepted</option>
+              <option value="Out for Delivery">Out for Delivery</option>
               <option value="Delivered">Delivered</option>
               <option value="Cancelled">Cancelled</option>
             </select>
-            <input
-              type="date"
-              className="input"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-            />
           </div>
         </div>
       </div>
@@ -148,9 +142,6 @@ const Orders: React.FC = () => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
                   </th>
                 </tr>
               </thead>
@@ -202,11 +193,6 @@ const Orders: React.FC = () => {
                         <Calendar className="h-4 w-4 mr-2" />
                         {new Date(order.createdAt).toLocaleDateString()}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-primary-600 hover:text-primary-900">
-                        <Eye className="h-4 w-4" />
-                      </button>
                     </td>
                   </tr>
                 ))}
