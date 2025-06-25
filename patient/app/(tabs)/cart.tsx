@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { Text, Card, Button, IconButton, Divider } from 'react-native-paper';
 import { router } from 'expo-router';
@@ -8,11 +8,27 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { theme } from '@/src/constants/theme';
 import Header from '@/src/components/Header';
 import { useCartStore } from '@/src/store/cartStore';
+import { notificationAPI } from '@/src/services/api';
 
 export default function CartScreen() {
   const { items = [], updateQuantity, removeFromCart, clearCart, getTotalPrice } = useCartStore();
   const [loading, setLoading] = useState(false);
+const [unreadCount, setUnreadCount] = useState(0);
 
+// Add this useEffect to fetch unread notifications count
+useEffect(() => {
+  const fetchUnreadCount = async () => {
+    try {
+      // Assuming you have an API endpoint to get unread notifications count
+      const response = await notificationAPI.getUnreadCount();
+      setUnreadCount(response.data.unreadCount || 0);
+    } catch (error) {
+      console.error('Error fetching unread notifications count:', error);
+    }
+  };
+
+  fetchUnreadCount();
+}, []);
   // Safe items array in case of undefined
   const safeItems = Array.isArray(items) ? items : [];
   
@@ -52,14 +68,23 @@ export default function CartScreen() {
   if (safeItems.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Header title="Shopping Cart" actions={[
-          <MaterialCommunityIcons 
-            key="notifications"
-            name="bell-outline" 
-            size={24} 
-            color={theme.colors.onSurface}
-            onPress={() => router.push('/notifications')}
-          />
+        <Header title="Shopping Cart" 
+        actions={[
+          <View key="notifications" style={{ position: 'relative' }}>
+            <MaterialCommunityIcons 
+              name="bell-outline" 
+              size={32} 
+              color={theme.colors.onSurface}
+              onPress={() => router.push('/notifications')}
+            />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
         ]}/>
         <View style={styles.emptyState}>
           <MaterialCommunityIcons 
@@ -243,6 +268,22 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     opacity: 0.7,
   },
+  badge: {
+  position: 'absolute',
+  right: 0,
+  top:-8,
+  backgroundColor: theme.colors.error,
+  borderRadius: 10,
+  width: 20,
+  height: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+badgeText: {
+  color: 'white',
+  fontSize: 10,
+  fontWeight: 'bold',
+},
   itemFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',

@@ -9,13 +9,28 @@ import Toast from 'react-native-toast-message';
 import { theme } from '@/src/constants/theme';
 import Header from '@/src/components/Header';
 import { useAuthStore } from '@/src/store/authStore';
-import { profileAPI } from '@/src/services/api';
+import { notificationAPI, profileAPI } from '@/src/services/api';
 
 export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuthStore();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
+const [unreadCount, setUnreadCount] = useState(0);
 
+// Add this useEffect to fetch unread notifications count
+useEffect(() => {
+  const fetchUnreadCount = async () => {
+    try {
+      // Assuming you have an API endpoint to get unread notifications count
+      const response = await notificationAPI.getUnreadCount();
+      setUnreadCount(response.data.unreadCount || 0);
+    } catch (error) {
+      console.error('Error fetching unread notifications count:', error);
+    }
+  };
+
+  fetchUnreadCount();
+}, []);
   const handleLogout = () => {
     Alert.alert(
       'Sign Out',
@@ -119,15 +134,25 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Header title="Profile" actions={[
-                <MaterialCommunityIcons 
-                  key="notifications"
-                  name="bell-outline" 
-                  size={24} 
-                  color={theme.colors.onSurface}
-                  onPress={() => router.push('/notifications')}
-                />
-              ]}/>
+      <Header title="Profile" 
+     actions={[
+       <View key="notifications" style={{ position: 'relative' }}>
+         <MaterialCommunityIcons 
+           name="bell-outline" 
+           size={32} 
+           color={theme.colors.onSurface}
+           onPress={() => router.push('/notifications')}
+         />
+         {unreadCount > 0 && (
+           <View style={styles.badge}>
+             <Text style={styles.badgeText}>
+               {unreadCount > 9 ? '9+' : unreadCount}
+             </Text>
+           </View>
+         )}
+       </View>
+     ]}
+              />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* User Info Card */}
@@ -306,6 +331,22 @@ const styles = StyleSheet.create({
     opacity: 0.7,
     marginBottom: 2,
   },
+  badge: {
+  position: 'absolute',
+  right: 0,
+  top:-8,
+  backgroundColor: theme.colors.error,
+  borderRadius: 10,
+  width: 20,
+  height: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+badgeText: {
+  color: 'white',
+  fontSize: 10,
+  fontWeight: 'bold',
+},
   userLocation: {
     opacity: 0.7,
   },

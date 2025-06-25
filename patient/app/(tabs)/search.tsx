@@ -9,7 +9,7 @@ import Toast from 'react-native-toast-message';
 
 import { theme } from '@/src/constants/theme';
 import Header from '@/src/components/Header';
-import { medicineAPI } from '@/src/services/api';
+import { medicineAPI, notificationAPI } from '@/src/services/api';
 import { useCartStore } from '@/src/store/cartStore';
 import { SearchResult } from '@/src/types';
 
@@ -22,7 +22,22 @@ export default function SearchScreen() {
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [sortBy, setSortBy] = useState<'price_asc' | 'price_desc' | 'distance'>('distance');
   const [deliveryFilter, setDeliveryFilter] = useState(false);
+const [unreadCount, setUnreadCount] = useState(0);
 
+// Add this useEffect to fetch unread notifications count
+useEffect(() => {
+  const fetchUnreadCount = async () => {
+    try {
+      // Assuming you have an API endpoint to get unread notifications count
+      const response = await notificationAPI.getUnreadCount();
+      setUnreadCount(response.data.unreadCount || 0);
+    } catch (error) {
+      console.error('Error fetching unread notifications count:', error);
+    }
+  };
+
+  fetchUnreadCount();
+}, []);
   useEffect(() => {
     getCurrentLocation();
   }, []);
@@ -186,15 +201,25 @@ export default function SearchScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Header title="Search Medicines" actions={[
-                <MaterialCommunityIcons 
-                  key="notifications"
-                  name="bell-outline" 
-                  size={24} 
-                  color={theme.colors.onSurface}
-                  onPress={() => router.push('/notifications')}
-                />
-              ]}/>
+      <Header title="Search Medicines" 
+      actions={[
+        <View key="notifications" style={{ position: 'relative' }}>
+          <MaterialCommunityIcons 
+            name="bell-outline" 
+            size={32} 
+            color={theme.colors.onSurface}
+            onPress={() => router.push('/notifications')}
+          />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Text>
+            </View>
+          )}
+        </View>
+      ]}
+              />
 
       <View style={styles.content}>
         {/* Search Bar */}
@@ -331,6 +356,22 @@ const styles = StyleSheet.create({
   filterText: {
     paddingHorizontal: 8,
   },
+  badge: {
+  position: 'absolute',
+  right: 0,
+  top:-8,
+  backgroundColor: theme.colors.error,
+  borderRadius: 10,
+  width: 20,
+  height: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+badgeText: {
+  color: 'white',
+  fontSize: 10,
+  fontWeight: 'bold',
+},
   filterChip: {
     marginRight: 8,
     height: 40,

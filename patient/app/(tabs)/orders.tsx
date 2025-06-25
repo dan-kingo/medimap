@@ -8,7 +8,7 @@ import Toast from 'react-native-toast-message';
 
 import { theme } from '@/src/constants/theme';
 import Header from '@/src/components/Header';
-import { orderAPI } from '@/src/services/api';
+import { notificationAPI, orderAPI } from '@/src/services/api';
 import { Order } from '@/src/types';
 
 export default function OrdersScreen() {
@@ -16,6 +16,23 @@ export default function OrdersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [unreadCount, setUnreadCount] = useState(0);
+  
+  // Add this useEffect to fetch unread notifications count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        // Assuming you have an API endpoint to get unread notifications count
+        const response = await notificationAPI.getUnreadCount();
+        setUnreadCount(response.data.unreadCount || 0);
+      } catch (error) {
+        console.error('Error fetching unread notifications count:', error);
+      }
+    };
+  
+    fetchUnreadCount();
+  }, []);
+  
   useEffect(() => {
     fetchOrders();
   }, []);
@@ -71,7 +88,23 @@ export default function OrdersScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Header title="My Orders" />
+        <Header title="My Orders" actions={[
+          <View key="notifications" style={{ position: 'relative' }}>
+            <MaterialCommunityIcons 
+              name="bell-outline" 
+              size={32} 
+              color={theme.colors.onSurface}
+              onPress={() => router.push('/notifications')}
+            />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
+        ]}/>
         <View style={styles.loadingState}>
           <MaterialCommunityIcons 
             name="loading" 
@@ -124,7 +157,23 @@ export default function OrdersScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Header title="My Orders" />
+      <Header title="My Orders"  actions={[
+          <View key="notifications" style={{ position: 'relative' }}>
+            <MaterialCommunityIcons 
+              name="bell-outline" 
+              size={32} 
+              color={theme.colors.onSurface}
+              onPress={() => router.push('/notifications')}
+            />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
+        ]}/>
 
       <ScrollView 
         style={styles.content}
@@ -239,6 +288,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
   },
+  badge: {
+  position: 'absolute',
+  right: 0,
+  top:-8,
+  backgroundColor: theme.colors.error,
+  borderRadius: 10,
+  width: 20,
+  height: 20,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+badgeText: {
+  color: 'white',
+  fontSize: 10,
+  fontWeight: 'bold',
+},
   emptyTitle: {
     marginTop: 16,
     marginBottom: 8,
