@@ -9,6 +9,7 @@ import { theme } from '@/src/constants/theme';
 import { useAuthStore } from '@/src/store/authStore';
 import { authAPI } from '@/src/services/api';
 import Header from '@/src/components/Header';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function LoginScreen() {
   const { login } = useAuthStore();
@@ -63,7 +64,13 @@ export default function LoginScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Header title="Sign In"  />
       
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <KeyboardAwareScrollView 
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid={true}
+        extraScrollHeight={20}
+        keyboardShouldPersistTaps="handled"
+      >
         <Animated.View entering={FadeInDown.delay(200).duration(600)}>
           <Text variant="headlineSmall" style={styles.title}>
             Welcome back!
@@ -81,7 +88,7 @@ export default function LoginScreen() {
               setPhone(text);
               if (errors.phone) setErrors({ ...errors, phone: undefined });
             }}
-            placeholder="Enter your phone number"
+            placeholder="+2519xxxxxxxx"
             keyboardType="phone-pad"
             mode="outlined"
             error={!!errors.phone}
@@ -145,7 +152,7 @@ export default function LoginScreen() {
             </Text>
           </Text>
         </Animated.View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }

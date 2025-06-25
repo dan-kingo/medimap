@@ -8,6 +8,7 @@ import Toast from 'react-native-toast-message';
 import { theme } from '@/src/constants/theme';
 import { authAPI } from '@/src/services/api';
 import Header from '@/src/components/Header';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 export default function ForgotPasswordScreen() {
   const [phone, setPhone] = useState('');
@@ -42,11 +43,20 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Header title="Forgot Password" showBack />
-      
-      <View style={styles.content}>
-        <Animated.View entering={FadeInDown.delay(200).duration(600)}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <Header title="Forgot Password" showBack />
+    
+    <KeyboardAwareScrollView 
+      style={styles.content}
+      showsVerticalScrollIndicator={false}
+      enableOnAndroid={true}
+      extraScrollHeight={20}
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={styles.scrollContent} // Add this
+    >
+     
+
+      <Animated.View entering={FadeInDown.delay(400).duration(600)} style={styles.form}>
           <Text variant="headlineSmall" style={styles.title}>
             Reset Password
           </Text>
@@ -63,7 +73,7 @@ export default function ForgotPasswordScreen() {
               setPhone(text);
               if (error) setError('');
             }}
-            placeholder="Enter your phone number"
+            placeholder="+2519xxxxxxxx"
             keyboardType="phone-pad"
             mode="outlined"
             error={!!error}
@@ -84,8 +94,8 @@ export default function ForgotPasswordScreen() {
             Send Reset Code
           </Button>
         </Animated.View>
+      </KeyboardAwareScrollView>
       </View>
-    </View>
   );
 }
 
@@ -95,8 +105,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
+
   },
   title: {
     fontWeight: 'bold',
@@ -106,6 +115,11 @@ const styles = StyleSheet.create({
   subtitle: {
     marginBottom: 32,
     textAlign: 'center',
+  },
+   scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
   },
   form: {
     alignItems: 'center',

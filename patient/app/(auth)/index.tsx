@@ -126,7 +126,7 @@ export default function RegisterScreen() {
               label="Phone Number *"
               value={formData.phone}
               onChangeText={(value) => updateFormData('phone', value)}
-              placeholder="Enter your phone number"
+              placeholder="+2519xxxxxxxx"
               keyboardType="phone-pad"
               mode="outlined"
               error={!!errors.phone}
