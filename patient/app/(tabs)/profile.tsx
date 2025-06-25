@@ -99,12 +99,7 @@ useEffect(() => {
           icon: 'history',
           onPress: () => router.push('/orders'),
         },
-        {
-          title: 'Prescriptions',
-          description: 'Manage uploaded prescriptions',
-          icon: 'file-document-outline',
-          onPress: () => router.push('/prescriptions'),
-        },
+      
       ],
     },
     {

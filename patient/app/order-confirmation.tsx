@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Image } from 'react-native';
 import { Text, Card, Button, Divider, RadioButton, TextInput } from 'react-native-paper';
 import { router } from 'expo-router';
 import * as Location from 'expo-location';
+import * as ImagePicker from 'expo-image-picker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 
@@ -20,12 +21,79 @@ export default function OrderConfirmationScreen() {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'COD'>('COD');
+  const [prescriptionImages, setPrescriptionImages] = useState<string[]>([]);
+  const [uploadingPrescription, setUploadingPrescription] = useState(false);
 
   const requiresPrescription = items.some(item => item.medicine.requiresPrescription);
+
+  const handleSelectPrescription = async () => {
+    try {
+      setUploadingPrescription(true);
+      
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission required', 'We need access to your photos to upload prescriptions.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setPrescriptionImages(prev => [...prev, result.assets[0].uri]);
+      }
+    } catch (error) {
+      console.error('Error selecting image:', error);
+      Alert.alert('Error', 'Failed to select image. Please try again.');
+    } finally {
+      setUploadingPrescription(false);
+    }
+  };
+
+  const handleCapturePrescription = async () => {
+    try {
+      setUploadingPrescription(true);
+      
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission required', 'We need access to your camera to capture prescriptions.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setPrescriptionImages(prev => [...prev, result.assets[0].uri]);
+      }
+    } catch (error) {
+      console.error('Error capturing image:', error);
+      Alert.alert('Error', 'Failed to capture image. Please try again.');
+    } finally {
+      setUploadingPrescription(false);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setPrescriptionImages(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handlePlaceOrder = async () => {
     if (deliveryType === 'delivery' && !address.trim()) {
       Alert.alert('Error', 'Please enter your delivery address');
+      return;
+    }
+
+    if (requiresPrescription && prescriptionImages.length === 0) {
+      Alert.alert('Prescription Required', 'Please upload a prescription image for the medicines that require it.');
       return;
     }
 
@@ -59,7 +127,7 @@ export default function OrderConfirmationScreen() {
 
       // Use pharmacy address as default for pickup orders
       const defaultPickupAddress = items.length > 0 
-        ? `Pickup at ${items[0].pharmacy.name}}`
+        ? `Pickup at ${items[0].pharmacy.name}`
         : 'Pickup at pharmacy';
 
       const orderData = {
@@ -68,6 +136,8 @@ export default function OrderConfirmationScreen() {
         address: deliveryType === 'delivery' ? address : defaultPickupAddress,
         location,
         paymentMethod,
+        notes,
+        prescriptionImages: requiresPrescription ? prescriptionImages : undefined,
       };
 
       const response = await orderAPI.placeOrder(orderData);
@@ -166,8 +236,57 @@ export default function OrderConfirmationScreen() {
                 Prescription Required
               </Text>
               <Text variant="bodySmall" style={styles.prescriptionNote}>
-                Some items in your order require a prescription. Please have your prescription ready when the pharmacy contacts you.
+                Some items in your order require a prescription. Please upload a clear image of your prescription.
               </Text>
+              
+              <View style={styles.prescriptionButtons}>
+                <Button 
+                  mode="outlined" 
+                  onPress={handleSelectPrescription}
+                  loading={uploadingPrescription}
+                  disabled={uploadingPrescription}
+                  style={styles.prescriptionButton}
+                  icon="image"
+                >
+                  Select Image
+                </Button>
+                <Button 
+                  mode="outlined" 
+                  onPress={handleCapturePrescription}
+                  loading={uploadingPrescription}
+                  disabled={uploadingPrescription}
+                  style={styles.prescriptionButton}
+                  icon="camera"
+                >
+                  Take Photo
+                </Button>
+              </View>
+              
+              {prescriptionImages.length > 0 && (
+                <View style={styles.prescriptionImagesContainer}>
+                  <Text variant="bodySmall" style={styles.uploadedPrescriptionsText}>
+                    Uploaded Prescriptions:
+                  </Text>
+                  <ScrollView horizontal>
+                    {prescriptionImages.map((uri, index) => (
+                      <View key={index} style={styles.prescriptionImageWrapper}>
+                        <Image 
+                          source={{ uri }} 
+                          style={styles.prescriptionImage}
+                        />
+                        <Button 
+                          mode="text" 
+                          onPress={() => handleRemoveImage(index)}
+                          style={styles.removeImageButton}
+                          textColor={theme.colors.error}
+                        >
+                          Remove
+                        </Button>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </Card.Content>
           </Card>
         )}
@@ -334,6 +453,35 @@ const styles = StyleSheet.create({
     color: theme.colors.error,
     marginTop: 4,
     fontSize: 12,
+  },
+  prescriptionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  prescriptionButton: {
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  prescriptionImagesContainer: {
+    marginTop: 12,
+  },
+  uploadedPrescriptionsText: {
+    marginBottom: 8,
+    opacity: 0.7,
+  },
+  prescriptionImageWrapper: {
+    marginRight: 12,
+    alignItems: 'center',
+  },
+  prescriptionImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    marginBottom: 4,
+  },
+  removeImageButton: {
+    width: '100%',
   },
   itemTotal: {
     fontWeight: '500',
