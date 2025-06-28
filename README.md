@@ -233,7 +233,7 @@ NODE_ENV=development
 # Database Configuration
 MONGO_LOCAL_URI=mongodb://localhost:27017/medimap
 # OR for MongoDB Atlas:
-# MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/medimap
+# MONGO_URI=mongodb atlas uri
 
 # JWT Configuration
 JWT_SECRET=your_super_secret_jwt_key_here_make_it_long_and_random
