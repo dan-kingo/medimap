@@ -6,6 +6,9 @@ const whitelist: string[] = [
   "http://localhost:5174",
   "http://localhost:5175",
   "https://www.google.com",
+  "https://medimap-api.onrender.com",
+  "https://medimap-pharmacy.onrender.com",
+  "https://medimap-admin.onrender.com",
 ];
 
 const corsOptions: CorsOptions = {

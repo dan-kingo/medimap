@@ -1,7 +1,7 @@
 // src/routes/notificationRoutes.ts
 import express from 'express';
-import { authenticateUser } from '../middlewares/authMiddleware';
-import { getMyNotifications, getUnreadCount, markAllAsRead, markAsRead } from '../controllers/notification.controller';
+import { authenticateUser } from '../middlewares/authMiddleware.js';
+import { getMyNotifications, getUnreadCount, markAllAsRead, markAsRead } from '../controllers/notification.controller.js';
 
 const router = express.Router();
 

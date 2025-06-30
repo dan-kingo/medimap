@@ -1,9 +1,9 @@
 // src/routes/profileRoutes.ts
 import express from 'express';
-import { authenticateUser } from '../middlewares/authMiddleware';
-import { addAddress, changePassword, deleteAddress, getProfile, updateAddress, updateProfile,getAddresses } from '../controllers/profile.controller';
-import validate from '../middlewares/validationMiddleware';
-import { addressSchema, changePasswordSchema, updateAddressSchema, updateProfileSchema } from '../validations/profile.schema';
+import { authenticateUser } from '../middlewares/authMiddleware.js';
+import { addAddress, changePassword, deleteAddress, getProfile, updateAddress, updateProfile,getAddresses } from '../controllers/profile.controller.js';
+import validate from '../middlewares/validationMiddleware.js';
+import { addressSchema, changePasswordSchema, updateAddressSchema, updateProfileSchema } from '../validations/profile.schema.js';
 
 
 const router = express.Router();
